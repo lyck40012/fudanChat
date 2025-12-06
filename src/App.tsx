@@ -1,7 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { HomePage } from './components/HomePage';
-import { VoiceCallPage } from './components/VoiceCallPage';
-import { AIQAPage } from './components/AIQAPage';
+import { HomePage } from './pages/home/HomePage';
+import { VoiceCallPage } from './pages/voiceCall/VoiceCallPage';
+import { AIQAPage } from './pages/aiQa/AIQAPage';
 
 export default function App() {
   return (
