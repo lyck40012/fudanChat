@@ -10,7 +10,7 @@ import type {
   CommonErrorEvent,
   ConversationAudioTranscriptUpdateEvent,
 } from '@coze/api';
-import {Button} from "antd";
+import {Button, Slider} from "antd";
 
 type CallStatus = 'connecting' | 'active' | 'ended';
 
@@ -217,8 +217,26 @@ const VoiceCall = () => {
   };
 
   // 切换静音
-  const toggleMute = () => {
-    setIsMuted(!isMuted);
+  const toggleMute = async () => {
+    if (!clientRef.current || !isConnected) {
+      console.warn('[voice-call] 客户端未连接，无法切换麦克风状态');
+      return;
+    }
+
+    try {
+      if (isMuted) {
+        // 当前是静音状态，需要取消静音（开启麦克风）
+        await clientRef.current.unmute();
+        console.log('[voice-call] 麦克风已开启');
+      } else {
+        // 当前不是静音状态，需要静音（关闭麦克风）
+        await clientRef.current.mute();
+        console.log('[voice-call] 麦克风已关闭');
+      }
+    } catch (error) {
+      console.error('[voice-call] 切换麦克风状态失败', error);
+      alert(`麦克风切换失败：${(error as Error).message}`);
+    }
   };
 
 
@@ -317,19 +335,31 @@ const VoiceCall = () => {
 
             {/* 音量控制 */}
             <div className={styles.volumeControl}>
-              <VolumeX className={styles.volumeIconMute} />
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={volume}
-                onChange={(e) => setVolume(Number(e.target.value))}
-                className={styles.volumeSlider}
-                style={{ writingMode: 'vertical-lr', height: '120px' }}
-                disabled={callStatus !== 'active'}
-              />
               <Volume2 className={styles.volumeIconMax} />
-              <span className={styles.volumePercent}>{volume}%</span>
+              <Slider
+                vertical
+                min={0}
+                max={100}
+                value={volume}
+                onChange={(value) => {
+                  setVolume(value);
+                  // 实时同步音量到 SDK
+                  if (clientRef.current && isConnected) {
+                    clientRef.current.setPlaybackVolume(value / 100);
+                  }
+                }}
+                disabled={callStatus !== 'active'}
+                tooltip={{ formatter: (value) => `${value}%` }}
+                className={styles.volumeSlider}
+                style={{ height: '120px' }}
+                trackStyle={{ backgroundColor: '#1890ff' }}
+                handleStyle={{
+                  borderColor: '#1890ff',
+                  backgroundColor: '#fff',
+                }}
+                railStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.3)' }}
+              />
+              <VolumeX className={styles.volumeIconMute} />
             </div>
 
             {/* 静音按钮 */}
