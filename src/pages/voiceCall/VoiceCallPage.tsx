@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import {useState, useEffect, useRef} from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Phone, Volume2, VolumeX, Mic, MicOff, Home, User, Bot } from 'lucide-react';
 import styles from './VoiceCallPage.module.scss';
+import {WsChatClient, WsToolsUtils} from "@coze/api/ws-tools";
 
 type CallStatus = 'connecting' | 'active' | 'ended';
 
@@ -13,6 +14,8 @@ interface Message {
 }
 
 const VoiceCall = () => {
+    const clientRef = useRef<WsChatClient>();
+    const audioConfigRef = useRef<any>(null);
   const navigate = useNavigate();
   const [callStatus, setCallStatus] = useState<CallStatus>('connecting');
   const [callDuration, setCallDuration] = useState(0);
@@ -61,6 +64,26 @@ const VoiceCall = () => {
       navigate('/');
     }, 2000);
   };
+
+const handleInitChat = async ()=>{
+
+}
+
+const  initClient = async () =>{
+    const permission = await WsToolsUtils.checkDevicePermission();
+    if (!permission.audio) {
+        throw new Error('需要麦克风访问权限');
+    }
+    // if (!config.getPat()) {
+    //     throw new Error('请先配置个人访问令牌 -> 右上角 Settings');
+    // }
+    //
+    // if (!config.getBotId()) {
+    //     throw new Error('请先配置智能体ID -> 右上角 Settings');
+    // }
+
+}
+
 
   // 切换静音
   const toggleMute = () => {
@@ -197,6 +220,7 @@ const VoiceCall = () => {
                 ))}
               </div>
             )}
+
 
             {/* 连接中提示 */}
             {callStatus === 'connecting' && (
