@@ -36,12 +36,25 @@ const VoiceCall = () => {
   const [isConnected, setIsConnected] = useState(false); // Coze WS 是否已连接
   const [transcript, setTranscript] = useState(''); // 实时语音转写结果
 
+  // 页面加载2秒后触发事件
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      // 在这里写你想要执行的事件逻辑
+      console.log('页面加载2秒后触发的事件');
+        setCallStatus('active')
+        handleStartCozeCall()
+    }, 2000); // 2秒 = 2000毫秒
+
+    // 清理定时器，防止内存泄漏
+    return () => clearTimeout(timer);
+  }, []); // 空依赖数组表示只在组件挂载时执行一次
+
   // 通话计时器
   useEffect(() => {
     if (callStatus === 'active') {
       const timer = setInterval(() => {
         setCallDuration((prev) => prev + 1);
-      }, 1000);
+      }, 2000);
       return () => clearInterval(timer);
     }
   }, [callStatus]);
