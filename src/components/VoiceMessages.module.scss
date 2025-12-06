@@ -1,0 +1,84 @@
+.messagesWrapper {
+  position: absolute;
+  inset-inline: 0;
+  height: 100%;
+  padding: 96px 24px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+}
+
+.messageRow {
+  display: flex;
+  gap: 12px;
+}
+
+.messageRowUser {
+  justify-content: flex-end;
+}
+
+.messageRowAi {
+  justify-content: flex-start;
+}
+
+.avatarCircleAi,
+.avatarCircleUser {
+  width: 36px;
+  height: 36px;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.avatarCircleAi {
+  background-color: #3b82f6; // blue-500
+}
+
+.avatarCircleUser {
+  background-color: #a855f7; // purple-500
+}
+
+.messageBubble {
+  max-width: 70%;
+  padding: 12px 16px;
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.4);
+}
+
+.messageBubbleUser {
+  border-bottom-right-radius: 0;
+  background-color: #3b82f6;
+  color: #ffffff;
+}
+
+.messageBubbleAi {
+  border-bottom-left-radius: 0;
+  background-color: rgba(15, 23, 42, 0.9);
+  color: #f9fafb;
+}
+
+.messageText {
+  font-size: 18px;
+  line-height: 1.5;
+}
+
+.transcribingText {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dotGroup {
+  display: flex;
+  gap: 4px;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background-color: #ffffff;
+}

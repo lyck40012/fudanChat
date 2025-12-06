@@ -1,8 +1,9 @@
 import {useState, useEffect, useRef, ReactNode} from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Volume2, VolumeX, Mic, MicOff, Home, User, Bot } from 'lucide-react';
+import { Volume2, VolumeX, Mic, MicOff, Home } from 'lucide-react';
 import styles from './VoiceCallPage.module.scss';
-import  _ from 'lodash'
+import VoiceMessages, { Message } from './component/VoiceMessages';
+import _ from 'lodash';
 // Coze WebSocket 语音聊天 SDK 相关依赖
 import { WsChatClient, WsChatEventNames, WsToolsUtils } from '@coze/api/ws-tools';
 import type {
@@ -12,13 +13,6 @@ import type {
 import {Button} from "antd";
 
 type CallStatus = 'connecting' | 'active' | 'ended';
-
-interface Message {
-  id: number;
-  type: 'user' | 'ai';
-  content: string;
-  isTranscribing?: boolean;
-}
 
 // TODO: 请在这里填写 Coze 相关配置
 // 这些值目前留空，方便你手动填写，不再依赖弹窗配置
@@ -308,7 +302,6 @@ const VoiceCall = () => {
                   isAISpeaking ? styles.aiAvatarWrapperSpeaking : ''
                 }`}
               >
-                <Bot className={styles.aiAvatarIcon} />
               </div>
               {isAISpeaking && (
                 <>
@@ -319,49 +312,7 @@ const VoiceCall = () => {
             </div>
 
             {/* 对话文字区域 */}
-            {messages.length > 0 && (
-              <div className={styles.messagesWrapper}>
-                {messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`${styles.messageRow} ${
-                      message.type === 'user' ? styles.messageRowUser : styles.messageRowAi
-                    }`}
-                  >
-                    {message.type === 'ai' && (
-                      <div className={styles.avatarCircleAi}>
-                        <Bot className="w-5 h-5 text-white" />
-                      </div>
-                    )}
-                    <div
-                      className={`${styles.messageBubble} ${
-                        message.type === 'user'
-                          ? styles.messageBubbleUser
-                          : styles.messageBubbleAi
-                      }`}
-                    >
-                      {message.isTranscribing ? (
-                        <div className={styles.transcribingText}>
-                          <span className={styles.messageText}>语音转文字中</span>
-                          <div className={styles.dotGroup}>
-                            <div className={styles.dot} />
-                            <div className={styles.dot} />
-                            <div className={styles.dot} />
-                          </div>
-                        </div>
-                      ) : (
-                        <p className={styles.messageText}>{message.content}</p>
-                      )}
-                    </div>
-                    {message.type === 'user' && (
-                      <div className={styles.avatarCircleUser}>
-                        <User className="w-5 h-5 text-white" />
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
+            <VoiceMessages messages={messages} />
 
 
             {/* 连接中提示 */}
