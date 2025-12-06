@@ -2,7 +2,7 @@ import {useState, useEffect, useRef, ReactNode} from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Volume2, VolumeX, Mic, MicOff, Home, User, Bot } from 'lucide-react';
 import styles from './VoiceCallPage.module.scss';
-
+import  _ from 'lodash'
 // Coze WebSocket 语音聊天 SDK 相关依赖
 import { WsChatClient, WsChatEventNames, WsToolsUtils } from '@coze/api/ws-tools';
 import type {
@@ -60,7 +60,7 @@ const VoiceCall = () => {
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
 
-  // 挂断
+  // 挂断当前通话
   const handleHangup = () => {
     // 如果已经和 Coze 建立连接，优先断开 WebSocket
     if (clientRef.current) {
@@ -69,10 +69,8 @@ const VoiceCall = () => {
       setIsConnected(false);
     }
 
+    // 标记通话结束，但不再自动跳转首页，方便用户在当前页重新开始对话
     setCallStatus('ended');
-    setTimeout(() => {
-      navigate('/');
-    }, 2000);
   };
 
   // 构造最简版 chatUpdate 配置（只保留通话所需的核心音频参数）
@@ -131,20 +129,30 @@ const VoiceCall = () => {
     bindCozeEvents();
   }
 
+
+  // 语音转写处理：将当前转写推入/合并到最后一条用户消息中
+  const handleTransformation = (_: string, data: unknown) => {
+    const event = data as ConversationAudioTranscriptUpdateEvent;
+    const content = event?.data?.content;
+    if (!content) return;
+    // 保存最新的转写结果
+    setTranscript(content);
+
+  };
+
   // 绑定 Coze 事件（语音转写、静音状态、错误处理）
-  function bindCozeEvents() {
+  const bindCozeEvents = ()=> {
     if (!clientRef.current) return;
 
-    // 语音转写更新
+    // 语音转写更新：多次触发时会合并到最后一条用户消息中
     clientRef.current.on(
       WsChatEventNames.CONVERSATION_AUDIO_TRANSCRIPT_UPDATE,
-      (_: string, data: unknown) => {
-        const event = data as ConversationAudioTranscriptUpdateEvent;
-        if (event?.data?.content) {
-          setTranscript(event.data.content);
-        }
-      },
+      handleTransformation,
     );
+
+    clientRef.current.on(WsChatEventNames.ALL,(a,b,c)=>{
+        console.log(a,b,c)
+    })
 
     // 麦克风静音 / 取消静音
     clientRef.current.on(WsChatEventNames.AUDIO_MUTED, () => {
@@ -380,14 +388,17 @@ const VoiceCall = () => {
 
           {/* 右侧控制栏 */}
           <div className={styles.rightPane}>
-            {/* 主控按钮：未连接时为“开始对话”，连接后变为“挂断” */}
+            {/* 主控按钮：未连接时为“开始对话”，连接后为“挂断”，挂断后可“重新开始对话” */}
             <Button
               type="primary"
               onClick={isConnected ? handleHangup : handleStartCozeCall}
               loading={!isConnected && isConnecting}
-              disabled={callStatus === 'ended'}
             >
-              {isConnected ? '挂断' : '开始对话'}
+              {isConnected
+                ? '挂断'
+                : callStatus === 'ended'
+                  ? '重新开始对话'
+                  : '开始对话'}
             </Button>
 
             {/* 打断对话按钮：仅在已连接且通话中时可用 */}
