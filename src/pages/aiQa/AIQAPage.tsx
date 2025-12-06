@@ -14,7 +14,7 @@ interface Message {
   fileName?: string;
 }
 
-export function AIQAPage() {
+const  AIQAPage=()=> {
   const navigate = useNavigate();
   const [currentMode, setCurrentMode] = useState<InputMode>('voice');
   const [messages, setMessages] = useState<Message[]>([
@@ -473,3 +473,5 @@ export function AIQAPage() {
     </div>
   );
 }
+
+export  default  AIQAPage
