@@ -2,8 +2,8 @@ import {useState, useEffect, useRef, ReactNode} from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Volume2, VolumeX, Mic, MicOff, Home } from 'lucide-react';
 import styles from './VoiceCallPage.module.scss';
-import VoiceMessages, { Message } from './component/VoiceMessages';
-import _ from 'lodash';
+import VoiceMessages from './component/VoiceMessages';
+
 // Coze WebSocket 语音聊天 SDK 相关依赖
 import { WsChatClient, WsChatEventNames, WsToolsUtils } from '@coze/api/ws-tools';
 import type {
@@ -14,8 +14,7 @@ import {Button} from "antd";
 
 type CallStatus = 'connecting' | 'active' | 'ended';
 
-// TODO: 请在这里填写 Coze 相关配置
-// 这些值目前留空，方便你手动填写，不再依赖弹窗配置
+
 const COZE_BASE_WS_URL = 'wss://ws.coze.cn';
 const COZE_PERSONAL_ACCESS_TOKEN = 'pat_hD3fk5ygNuFPLz5ndwIKYWmwY8qgET9DrruIA3Ean8cCEPfSi6o40EZmMg03TS5P';
 const COZE_BOT_ID = '7574375637029273609';
@@ -29,7 +28,7 @@ const VoiceCall = () => {
   const [callDuration, setCallDuration] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
   const [volume, setVolume] = useState(70);
-  const [messages, setMessages] = useState<Message[]>([]);
+
   const [isAISpeaking, setIsAISpeaking] = useState(false);
 
   // Coze 相关状态
@@ -144,10 +143,6 @@ const VoiceCall = () => {
       handleTransformation,
     );
 
-    clientRef.current.on(WsChatEventNames.ALL,(a,b,c)=>{
-        console.log(a,b,c)
-    })
-
     // 麦克风静音 / 取消静音
     clientRef.current.on(WsChatEventNames.AUDIO_MUTED, () => {
       console.log('[voice-call] 麦克风已关闭');
@@ -226,41 +221,6 @@ const VoiceCall = () => {
     setIsMuted(!isMuted);
   };
 
-  // 模拟添加对话
-  const simulateConversation = () => {
-    if (callStatus === 'active') {
-      // 添加用户消息
-      const userMsg: Message = {
-        id: messages.length + 1,
-        type: 'user',
-        content: '请问你能帮我做什么？',
-        isTranscribing: true,
-      };
-      setMessages((prev) => [...prev, userMsg]);
-
-      setTimeout(() => {
-        setMessages((prev) =>
-          prev.map((msg) => (msg.id === userMsg.id ? { ...msg, isTranscribing: false } : msg))
-        );
-
-        setIsAISpeaking(true);
-        const aiMsg: Message = {
-          id: messages.length + 2,
-          type: 'ai',
-          content: '我可以回答您关于产品、门店、活动等各类问题，还可以为您提供智能建议。',
-          isTranscribing: true,
-        };
-        setMessages((prev) => [...prev, aiMsg]);
-
-        setTimeout(() => {
-          setMessages((prev) =>
-            prev.map((msg) => (msg.id === aiMsg.id ? { ...msg, isTranscribing: false } : msg))
-          );
-          setIsAISpeaking(false);
-        }, 2000);
-      }, 1500);
-    }
-  };
 
   return (
     <div className={styles.page}>
@@ -311,11 +271,9 @@ const VoiceCall = () => {
               )}
             </div>
 
-            {/* 对话文字区域 */}
-            <VoiceMessages messages={messages} />
+            <VoiceMessages  clientRef={clientRef}  />
 
 
-            {/* 连接中提示 */}
             {callStatus === 'connecting' && (
               <div className={styles.overlayCenter}>
                 <div className={styles.overlayPanel}>
@@ -337,9 +295,7 @@ const VoiceCall = () => {
             )}
           </div>
 
-          {/* 右侧控制栏 */}
           <div className={styles.rightPane}>
-            {/* 主控按钮：未连接时为“开始对话”，连接后为“挂断”，挂断后可“重新开始对话” */}
             <Button
               type="primary"
               onClick={isConnected ? handleHangup : handleStartCozeCall}
@@ -351,8 +307,6 @@ const VoiceCall = () => {
                   ? '重新开始对话'
                   : '开始对话'}
             </Button>
-
-            {/* 打断对话按钮：仅在已连接且通话中时可用 */}
             <Button
               type="primary"
               onClick={handleInterruptCall}
@@ -407,13 +361,6 @@ const VoiceCall = () => {
               </div>
               <span className={styles.backLabel}>返回</span>
             </button>
-
-            {/* 测试按钮 - 模拟对话 */}
-            {callStatus === 'active' && (
-              <button onClick={simulateConversation} className={styles.simulateButtonPrimary}>
-                模拟对话
-              </button>
-            )}
           </div>
         </div>
       </div>
