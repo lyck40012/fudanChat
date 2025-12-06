@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
-import { Mic, MessageSquare, Volume2, MessageCircle, FileText } from 'lucide-react';
+
 import styles from './HomePage.module.scss';
+import {AudioOutlined, DoubleRightOutlined, WechatWorkOutlined} from "@ant-design/icons";
 
 // 首页组件：使用 Sass 模块进行样式管理
 export function HomePage() {
@@ -14,7 +15,7 @@ export function HomePage() {
         <div className={styles.header}>
           <div className={styles.headerMain}>
             <div className={styles.logo}>
-              <MessageSquare className="w-10 h-10 text-white" />
+                <DoubleRightOutlined />
             </div>
             <h1 className={styles.title}>AI 数字人助手</h1>
           </div>
@@ -30,7 +31,7 @@ export function HomePage() {
               className={`${styles.actionButton} ${styles.actionButtonPrimary}`}
             >
               <div className={styles.actionIconWrapper}>
-                <Mic className="w-12 h-12 text-white" />
+                  <AudioOutlined />
               </div>
               <div className="text-center">
                 <h2 className={styles.actionTitle}>语音通话</h2>
@@ -44,7 +45,7 @@ export function HomePage() {
               className={`${styles.actionButton} ${styles.actionButtonSecondary}`}
             >
               <div className={styles.actionIconWrapper}>
-                <MessageCircle className="w-12 h-12 text-white" />
+                  <WechatWorkOutlined />
               </div>
               <div className="text-center">
                 <h2 className={styles.actionTitle}>AI问答</h2>
@@ -69,7 +70,7 @@ export function HomePage() {
             <div className={styles.featuresList}>
               <div className={styles.featureItem}>
                 <div className={styles.featureIconWrapperBlue}>
-                  <Volume2 className="w-11 h-11 text-white" />
+
                 </div>
                 <div>
                   <h3 className={styles.featureContentTitle}>语音实时问答</h3>
@@ -79,7 +80,7 @@ export function HomePage() {
 
               <div className={styles.featureItem}>
                 <div className={styles.featureIconWrapperPurple}>
-                  <MessageCircle className="w-11 h-11 text-white" />
+
                 </div>
                 <div>
                   <h3 className={styles.featureContentTitle}>多轮智能对话</h3>
@@ -89,7 +90,7 @@ export function HomePage() {
 
               <div className={styles.featureItem}>
                 <div className={styles.featureIconWrapperIndigo}>
-                  <FileText className="w-11 h-11 text-white" />
+
                 </div>
                 <div>
                   <h3 className={styles.featureContentTitle}>支持文件讲解</h3>
