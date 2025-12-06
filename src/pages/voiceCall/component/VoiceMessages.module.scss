@@ -7,6 +7,29 @@
   flex-direction: column;
   gap: 16px;
   overflow-y: auto;
+
+  // Custom sleek scrollbar
+  &::-webkit-scrollbar {
+    width: 4px; /* Thin scrollbar */
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent; /* Invisible track */
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.15);
+    border-radius: 99px;
+    transition: background-color 0.3s ease;
+
+    &:hover {
+      background-color: rgba(255, 255, 255, 0.3);
+    }
+  }
+  
+  // Firefox scrollbar support
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
 }
 
 .messageRow {
