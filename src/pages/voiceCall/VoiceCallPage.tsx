@@ -10,7 +10,7 @@ import type {
   CommonErrorEvent,
   ConversationAudioTranscriptUpdateEvent,
 } from '@coze/api';
-import {Button, Slider} from "antd";
+import {Button, message, Slider} from "antd";
 
 type CallStatus = 'connecting' | 'active' | 'ended';
 
@@ -28,7 +28,7 @@ const VoiceCall = () => {
   const [callDuration, setCallDuration] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
   const [volume, setVolume] = useState(70);
-
+    const [audioEnabled, setAudioEnabled] = useState(true);
   const [isAISpeaking, setIsAISpeaking] = useState(false);
 
   // Coze 相关状态
@@ -218,25 +218,12 @@ const VoiceCall = () => {
 
   // 切换静音
   const toggleMute = async () => {
-    if (!clientRef.current || !isConnected) {
-      console.warn('[voice-call] 客户端未连接，无法切换麦克风状态');
-      return;
-    }
-
-    try {
-      if (isMuted) {
-        // 当前是静音状态，需要取消静音（开启麦克风）
-        await clientRef.current.unmute();
-        console.log('[voice-call] 麦克风已开启');
-      } else {
-        // 当前不是静音状态，需要静音（关闭麦克风）
-        await clientRef.current.mute();
-        console.log('[voice-call] 麦克风已关闭');
+      try {
+          await clientRef.current?.setAudioEnable(!audioEnabled);
+          setAudioEnabled(!audioEnabled);
+      } catch (error) {
+          message.error(`切换麦克风状态失败：${error}`);
       }
-    } catch (error) {
-      console.error('[voice-call] 切换麦克风状态失败', error);
-      alert(`麦克风切换失败：${(error as Error).message}`);
-    }
   };
 
 
@@ -343,21 +330,13 @@ const VoiceCall = () => {
                 value={volume}
                 onChange={(value) => {
                   setVolume(value);
-                  // 实时同步音量到 SDK
                   if (clientRef.current && isConnected) {
                     clientRef.current.setPlaybackVolume(value / 100);
                   }
                 }}
                 disabled={callStatus !== 'active'}
                 tooltip={{ formatter: (value) => `${value}%` }}
-                className={styles.volumeSlider}
                 style={{ height: '120px' }}
-                trackStyle={{ backgroundColor: '#1890ff' }}
-                handleStyle={{
-                  borderColor: '#1890ff',
-                  backgroundColor: '#fff',
-                }}
-                railStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.3)' }}
               />
               <VolumeX className={styles.volumeIconMute} />
             </div>
@@ -370,17 +349,17 @@ const VoiceCall = () => {
             >
               <div
                 className={`${styles.muteCircle} ${
-                  isMuted ? styles.muteCircleActive : styles.muteCircleInactive
+                    !audioEnabled ? styles.muteCircleActive : styles.muteCircleInactive
                 }`}
               >
-                {isMuted ? (
+                {!audioEnabled ? (
                   <MicOff className="w-10 h-10 text-red-400" />
                 ) : (
                   <Mic className="w-10 h-10 text-white" />
                 )}
               </div>
-              <span className={isMuted ? styles.muteLabelActive : styles.muteLabel}>
-                {isMuted ? '已静音' : '麦克风'}
+              <span className={!audioEnabled ? styles.muteLabelActive : styles.muteLabel}>
+                {!audioEnabled ? '已静音' : '麦克风'}
               </span>
             </button>
 

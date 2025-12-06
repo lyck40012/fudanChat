@@ -335,56 +335,6 @@
               transform: scale(1.1);
             }
           }
-
-          // 为 antd Slider 组件添加自定义样式
-          :global(.ant-slider) {
-            margin: 0;
-
-            &:global(.ant-slider-vertical) {
-              width: 4px;
-
-              :global(.ant-slider-rail) {
-                width: 4px;
-                background: rgba(255, 255, 255, 0.2);
-                border-radius: 2px;
-              }
-
-              :global(.ant-slider-track) {
-                width: 4px;
-                background: linear-gradient(to top, #1890ff, #60a5fa);
-                border-radius: 2px;
-                box-shadow: 0 0 10px rgba(24, 144, 255, 0.5);
-              }
-
-              :global(.ant-slider-handle) {
-                width: 16px;
-                height: 16px;
-                margin-left: -6px;
-                border: 3px solid #1890ff;
-                background-color: #fff;
-                box-shadow: 0 2px 8px rgba(24, 144, 255, 0.5);
-
-                &:hover,
-                &:focus {
-                  border-color: #40a9ff;
-                  box-shadow: 0 0 0 5px rgba(24, 144, 255, 0.2);
-                }
-              }
-
-              &:global(.ant-slider-disabled) {
-                :global(.ant-slider-track) {
-                  background: rgba(255, 255, 255, 0.1) !important;
-                  box-shadow: none;
-                }
-
-                :global(.ant-slider-handle) {
-                  border-color: rgba(255, 255, 255, 0.2);
-                  background-color: rgba(255, 255, 255, 0.3);
-                  box-shadow: none;
-                }
-              }
-            }
-          }
         }
 
         .muteCircle {
