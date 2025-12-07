@@ -171,10 +171,6 @@ const AIQAPage = () => {
       <div className={styles.contentWrapper}>
         <div className={styles.topNav}>
           <h1>AI问答</h1>
-          <button onClick={() => navigate('/')} className={styles.homeButton}>
-            <Home />
-            <span>返回</span>
-          </button>
         </div>
 
         <div className={styles.mainContent}>
@@ -261,65 +257,71 @@ const AIQAPage = () => {
           </div>
 
           <div className={styles.toolbar}>
-            <button
-              onMouseDown={startRecording}
-              onMouseUp={stopRecording}
-              onMouseLeave={() => voiceStatus === 'recording' && stopRecording()}
-              onTouchStart={startRecording}
-              onTouchEnd={stopRecording}
-              onClick={() => switchMode('voice')}
-              className={getToolbarButtonClasses('voice')}
-            >
-              <div className={getToolbarIconWrapperClasses('voice')}>
-                <Mic />
-              </div>
-              <div className={styles.toolbarText}>
-                <h3>按住说话</h3>
-                <p>{voiceStatus === 'recording' ? '录音中...' : '按住开始录音，松开发送'}</p>
-              </div>
-            </button>
+            <div className={styles.toolbarButtons}>
+              <button
+                onMouseDown={startRecording}
+                onMouseUp={stopRecording}
+                onMouseLeave={() => voiceStatus === 'recording' && stopRecording()}
+                onTouchStart={startRecording}
+                onTouchEnd={stopRecording}
+                onClick={() => switchMode('voice')}
+                className={getToolbarButtonClasses('voice')}
+              >
+                <div className={getToolbarIconWrapperClasses('voice')}>
+                  <Mic />
+                </div>
+                <div className={styles.toolbarText}>
+                  <h3>按住说话</h3>
+                  <p>{voiceStatus === 'recording' ? '录音中...' : '按住开始录音，松开发送'}</p>
+                </div>
+              </button>
 
-            <button
-              onClick={() => {
-                switchMode('file');
-                fileInputRef.current?.click();
-              }}
-              className={getToolbarButtonClasses('file')}
-            >
-              <div className={styles.toolbarIconWrapper}>
-                <Upload />
-              </div>
-              <div className={styles.toolbarText}>
-                <h3>上传文件</h3>
-                <p>支持PDF、图片等文件</p>
-              </div>
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-              onChange={handleFileUpload}
-              className={styles.fileInput}
-            />
+              <button
+                onClick={() => {
+                  switchMode('file');
+                  fileInputRef.current?.click();
+                }}
+                className={getToolbarButtonClasses('file')}
+              >
+                <div className={styles.toolbarIconWrapper}>
+                  <Upload />
+                </div>
+                <div className={styles.toolbarText}>
+                  <h3>上传文件</h3>
+                  <p>支持PDF、图片等文件</p>
+                </div>
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                onChange={handleFileUpload}
+                className={styles.fileInput}
+              />
 
-            <button onClick={() => switchMode('camera')} className={getToolbarButtonClasses('camera')}>
-              <div className={styles.toolbarIconWrapper}>
-                <Camera />
-              </div>
-              <div className={styles.toolbarText}>
-                <h3>拍摄</h3>
-                <p>拍照上传报告</p>
-              </div>
-            </button>
+              <button onClick={() => switchMode('camera')} className={getToolbarButtonClasses('camera')}>
+                <div className={styles.toolbarIconWrapper}>
+                  <Camera />
+                </div>
+                <div className={styles.toolbarText}>
+                  <h3>拍摄</h3>
+                  <p>拍照上传报告</p>
+                </div>
+              </button>
 
-            <button onClick={() => switchMode('text')} className={getToolbarButtonClasses('text')}>
-              <div className={styles.toolbarIconWrapper}>
-                <Keyboard />
-              </div>
-              <div className={styles.toolbarText}>
-                <h3>打字</h3>
-                <p>使用键盘输入问题</p>
-              </div>
+              <button onClick={() => switchMode('text')} className={getToolbarButtonClasses('text')}>
+                <div className={styles.toolbarIconWrapper}>
+                  <Keyboard />
+                </div>
+                <div className={styles.toolbarText}>
+                  <h3>打字</h3>
+                  <p>使用键盘输入问题</p>
+                </div>
+              </button>
+            </div>
+            <button onClick={() => navigate('/')} className={styles.homeButton}>
+              <Home />
+              <span>返回</span>
             </button>
           </div>
         </div>

@@ -22,7 +22,7 @@
   height: 8%;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   padding: 0 32px;
   background-color: rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(4px);
@@ -37,14 +37,18 @@
 .homeButton {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   padding: 12px 24px;
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: rgba(30, 41, 59, 0.5);
+  border: 2px solid transparent;
   border-radius: 16px;
   transition: all 0.2s;
+  width: 100%;
 
   &:hover {
-    background-color: rgba(255, 255, 255, 0.2);
+    background-color: rgba(51, 65, 85, 0.5);
+    border-color: rgba(168, 85, 247, 0.5);
   }
 
   svg {
@@ -302,9 +306,15 @@
   border-left: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  justify-content: space-between;
   padding: 32px 16px;
   overflow-y: auto;
+}
+
+.toolbarButtons {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .toolbarButton {
