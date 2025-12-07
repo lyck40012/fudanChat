@@ -1,7 +1,8 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Home, Mic, Upload, Camera, Keyboard, User, Bot, Send, X, RotateCcw, Check } from 'lucide-react';
-import styles from './AIQAPage.module.scss';
+import { message } from 'antd';
+import styles from './AIQA.module.scss';
 
 type InputMode = 'voice' | 'file' | 'camera' | 'text';
 type VoiceStatus = 'idle' | 'recording' | 'processing';
@@ -15,7 +16,7 @@ interface Message {
   fileName?: string;
 }
 
-const AIQAPage = () => {
+const AIQA = () => {
   const navigate = useNavigate();
   const [currentMode, setCurrentMode] = useState<InputMode>('voice');
   const [messages, setMessages] = useState<Message[]>([
@@ -26,6 +27,7 @@ const AIQAPage = () => {
   const [cameraStatus, setCameraStatus] = useState<CameraStatus>('closed');
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const pressStartTimeRef = useRef<number | null>(null);
 
   const switchMode = (mode: InputMode) => {
     setCurrentMode(mode);
@@ -37,10 +39,20 @@ const AIQAPage = () => {
   };
 
   const startRecording = () => {
+    pressStartTimeRef.current = Date.now();
     setVoiceStatus('recording');
   };
 
   const stopRecording = () => {
+    const pressDuration = pressStartTimeRef.current ? Date.now() - pressStartTimeRef.current : 0;
+    pressStartTimeRef.current = null;
+
+    if (pressDuration < 500) {
+      setVoiceStatus('idle');
+      message.warning('时间过短');
+      return;
+    }
+
     setVoiceStatus('processing');
     setTimeout(() => {
       const userMsg: Message = {
@@ -375,4 +387,4 @@ const AIQAPage = () => {
   );
 };
 
-export default AIQAPage;
+export default AIQA;

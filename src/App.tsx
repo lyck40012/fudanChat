@@ -1,7 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Home from './pages/home/HomePage';
-import VoiceCall from './pages/voiceCall/VoiceCallPage';
-import AIQAPage from './pages/aiQa/AIQAPage';
+import Home from './pages/home/Home';
+import VoiceCall from './pages/voiceCall/VoiceCall';
+import AIQA from './pages/aiQa/AIQA';
 
 export default function App() {
   return (
@@ -9,7 +9,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/voice-call" element={<VoiceCall />} />
-        <Route path="/ai-qa" element={<AIQAPage />} />
+        <Route path="/ai-qa" element={<AIQA />} />
       </Routes>
     </Router>
   );

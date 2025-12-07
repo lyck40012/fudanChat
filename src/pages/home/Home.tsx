@@ -1,10 +1,10 @@
 import { useNavigate } from 'react-router-dom';
 
-import styles from './HomePage.module.scss';
+import styles from './Home.module.scss';
 import {AudioOutlined, DoubleRightOutlined, WechatWorkOutlined} from "@ant-design/icons";
 
 // 首页组件：使用 Sass 模块进行样式管理
-export function HomePage() {
+export function Home() {
   const navigate = useNavigate();
 
   return (
@@ -105,4 +105,4 @@ export function HomePage() {
   );
 }
 
-export default HomePage;
+export default Home;

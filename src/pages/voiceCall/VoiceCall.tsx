@@ -1,7 +1,7 @@
 import {useState, useEffect, useRef, ReactNode} from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Volume2, VolumeX, Mic, MicOff, Home } from 'lucide-react';
-import styles from './VoiceCallPage.module.scss';
+import styles from './VoiceCall.module.scss';
 import VoiceMessages from './component/VoiceMessages';
 
 // Coze WebSocket 语音聊天 SDK 相关依赖
@@ -112,13 +112,13 @@ const VoiceCall = () => {
 
     // 2. 校验必须配置项（留空时直接抛出错误，方便你在本地修改常量）
     if (!COZE_PERSONAL_ACCESS_TOKEN) {
-      throw new Error('请在 VoiceCallPage.tsx 中填写 COZE_PERSONAL_ACCESS_TOKEN');
+      throw new Error('请在 VoiceCall.tsx 中填写 COZE_PERSONAL_ACCESS_TOKEN');
     }
     if (!COZE_BOT_ID) {
-      throw new Error('请在 VoiceCallPage.tsx 中填写 COZE_BOT_ID');
+      throw new Error('请在 VoiceCall.tsx 中填写 COZE_BOT_ID');
     }
     if (!COZE_BASE_WS_URL) {
-      throw new Error('请在 VoiceCallPage.tsx 中填写 COZE_BASE_WS_URL');
+      throw new Error('请在 VoiceCall.tsx 中填写 COZE_BASE_WS_URL');
     }
 
     // 3. 创建 WsChatClient 实例（先使用最精简配置，后续再逐步补充音频参数）
