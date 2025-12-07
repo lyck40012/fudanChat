@@ -39,11 +39,14 @@ const AIQA = () => {
   };
 
   const startRecording = () => {
+    if (currentMode !== 'voice') return;
     pressStartTimeRef.current = Date.now();
     setVoiceStatus('recording');
   };
 
   const stopRecording = () => {
+    if (currentMode !== 'voice' || voiceStatus !== 'recording') return;
+
     const pressDuration = pressStartTimeRef.current ? Date.now() - pressStartTimeRef.current : 0;
     pressStartTimeRef.current = null;
 
