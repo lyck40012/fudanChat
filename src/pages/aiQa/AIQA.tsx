@@ -39,6 +39,7 @@ const AIQA = () => {
     const [selectedInputDevice, setSelectedInputDevice] = useState<string>('');
     const [hasPermission, setHasPermission] = useState<boolean | null>(null);
     const [denoiserSupported, setDenoiserSupported] = useState<boolean>(false);
+    const [recognizeResult,setRecognizeResult] = useState<Message>({}) //暂存语音识别结果
     const clientRef = useRef<WsTranscriptionClient>();
     useEffect(() => {
         //获取权限
@@ -100,9 +101,8 @@ const AIQA = () => {
                 type: 'user',
                 content: event.data.content,
             };
-
-            setMessages(prev => [...prev, userMsg]);
-            setVoiceStatus('idle');
+            console.log(userMsg)
+            setRecognizeResult(userMsg)
             },
         );
 
@@ -143,16 +143,16 @@ const AIQA = () => {
         if (currentMode !== 'voice' || voiceStatus !== 'recording') return;
         const pressDuration = pressStartTimeRef.current ? Date.now() - pressStartTimeRef.current : 0;
         pressStartTimeRef.current = null;
-         clientRef.current.stop()
+        clientRef.current.stop()
         if (pressDuration < 500) {
             setVoiceStatus('idle');
             message.warning('时间过短');
             return;
         }
-
-        setVoiceStatus('processing');
+        setVoiceStatus('processing')
         setVoiceStatus('idle');
-
+        if(Object.keys(recognizeResult).length) setMessages(prev => [...prev, recognizeResult]);
+        setRecognizeResult({})
 /*        setTimeout(() => {
             const userMsg: Message = {
                 id: messages.length + 1,
@@ -277,6 +277,7 @@ const AIQA = () => {
         return classNames.join(' ');
     };
 
+    console.log("messages=========>",messages)
     return (
         <div className={styles.container}>
             <div className={styles.contentWrapper}>
