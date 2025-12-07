@@ -1,6 +1,6 @@
 import React, {useState, useRef, useEffect} from 'react';
 import {useNavigate} from 'react-router-dom';
-import {Home, Mic, Upload, Camera, Keyboard, User, Bot, Send, X, RotateCcw, Check} from 'lucide-react';
+import {Home, Mic, Upload, Camera, Keyboard, User, Bot, Send} from 'lucide-react';
 import {message} from 'antd';
 import styles from './AIQA.module.scss';
 import {
@@ -14,7 +14,6 @@ import {CommonErrorEvent, TranscriptionsMessageUpdateEvent, WebsocketsEventType}
 
 type InputMode = 'voice' | 'file' | 'camera' | 'text';
 type VoiceStatus = 'idle' | 'recording' | 'processing';
-type CameraStatus = 'closed' | 'preview' | 'captured';
 
 interface Message {
     id: number;
@@ -32,14 +31,12 @@ const AIQA = () => {
     ]);
     const [textInput, setTextInput] = useState('');
     const [voiceStatus, setVoiceStatus] = useState<VoiceStatus>('idle');
-    const [cameraStatus, setCameraStatus] = useState<CameraStatus>('closed');
-    const [capturedImage, setCapturedImage] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const pressStartTimeRef = useRef<number | null>(null);
     const [selectedInputDevice, setSelectedInputDevice] = useState<string>('');
     const [hasPermission, setHasPermission] = useState<boolean | null>(null);
     const [denoiserSupported, setDenoiserSupported] = useState<boolean>(false);
-    const [recognizeResult,setRecognizeResult] = useState<Message>({}) //暂存语音识别结果
+    const [recognizeResult,setRecognizeResult] = useState<Message>({} as Message) //暂存语音识别结果
     const clientRef = useRef<WsTranscriptionClient>();
     useEffect(() => {
         //获取权限
@@ -97,9 +94,9 @@ const AIQA = () => {
         // 监听转录结果更新
         client.on(WebsocketsEventType.TRANSCRIPTIONS_MESSAGE_UPDATE,(event: unknown) => {
             const userMsg: Message = {
-                id: event.detail.logid,
+                id: (event as TranscriptionsMessageUpdateEvent).data.logid,
                 type: 'user',
-                content: event.data.content,
+                content: (event as TranscriptionsMessageUpdateEvent).data.content,
             };
             console.log(userMsg)
             setRecognizeResult(userMsg)
@@ -124,11 +121,6 @@ const AIQA = () => {
             }
         }
         setCurrentMode(mode);
-        if (mode === 'camera') {
-            setCameraStatus('preview');
-        } else {
-            setCameraStatus('closed');
-        }
     };
 
 
@@ -152,24 +144,7 @@ const AIQA = () => {
         setVoiceStatus('processing')
         setVoiceStatus('idle');
         if(Object.keys(recognizeResult).length) setMessages(prev => [...prev, recognizeResult]);
-        setRecognizeResult({})
-/*        setTimeout(() => {
-            const userMsg: Message = {
-                id: messages.length + 1,
-                type: 'user',
-                content: '请问你们的营业时间是几点到几点？'
-            };
-            setMessages(prev => [...prev, userMsg]);
-            setVoiceStatus('idle');
-            setTimeout(() => {
-                const aiMsg: Message = {
-                    id: messages.length + 2,
-                    type: 'ai',
-                    content: '我们的营业时间是每天上午9:00到晚上9:00，节假日正常营业。如有特殊情况会提前通知。'
-                };
-                setMessages(prev => [...prev, aiMsg]);
-            }, 1000);
-        }, 1500);*/
+        setRecognizeResult({} as Message)
     };
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -191,44 +166,6 @@ const AIQA = () => {
                 setMessages(prev => [...prev, aiMsg]);
             }, 1000);
         }
-    };
-
-    const handleCapture = () => {
-        setCameraStatus('captured');
-        setCapturedImage('https://images.unsplash.com/photo-1554224311-beee460c201f?w=400');
-    };
-
-    const confirmUpload = () => {
-        if (capturedImage) {
-            const userMsg: Message = {
-                id: messages.length + 1,
-                type: 'user',
-                content: '已上传图片',
-                imageUrl: capturedImage
-            };
-            setMessages(prev => [...prev, userMsg]);
-            setCameraStatus('closed');
-            setCapturedImage(null);
-            setTimeout(() => {
-                const aiMsg: Message = {
-                    id: messages.length + 2,
-                    type: 'ai',
-                    content: '我已经看到您的图片了。您可以问我：\n• 帮我解读下报告\n• 图片中有什么内容\n• 分析图片中的数据'
-                };
-                setMessages(prev => [...prev, aiMsg]);
-            }, 1000);
-        }
-    };
-
-    const retakePhoto = () => {
-        setCameraStatus('preview');
-        setCapturedImage(null);
-    };
-
-    const cancelCamera = () => {
-        setCameraStatus('closed');
-        setCapturedImage(null);
-        setCurrentMode('voice');
     };
 
     const handleSendText = () => {
@@ -412,7 +349,7 @@ const AIQA = () => {
                                 className={styles.fileInput}
                             />
 
-                            <button onClick={() => switchMode('camera')} className={getToolbarButtonClasses('camera')}>
+                            <div className={getToolbarButtonClasses('camera')}>
                                 <div className={styles.toolbarIconWrapper}>
                                     <Camera/>
                                 </div>
@@ -420,7 +357,7 @@ const AIQA = () => {
                                     <h3>拍摄</h3>
                                     <p>拍照上传报告</p>
                                 </div>
-                            </button>
+                            </div>
 
                             <button onClick={() => switchMode('text')} className={getToolbarButtonClasses('text')}>
                                 <div className={styles.toolbarIconWrapper}>
@@ -438,53 +375,6 @@ const AIQA = () => {
                         </button>
                     </div>
                 </div>
-
-                {cameraStatus !== 'closed' && (
-                    <div className={styles.cameraOverlay}>
-                        {cameraStatus === 'preview' && (
-                            <div className={styles.cameraPreview}>
-                                <div className={styles.cameraView}>
-                                    <div className={styles.placeholder}>
-                                        <Camera/>
-                                        <p>摄像头预览</p>
-                                        <p>（实际应用中这里会显示摄像头画面）</p>
-                                    </div>
-                                </div>
-                                <div className={styles.cameraControls}>
-                                    <button onClick={cancelCamera} className={styles.cancelButton}>
-                                        <X/>
-                                    </button>
-                                    <button onClick={handleCapture} className={styles.captureButton}>
-                                        <div className={styles.captureButtonInner}></div>
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                        {cameraStatus === 'captured' && capturedImage && (
-                            <div className={styles.capturedPreview}>
-                                <div className={styles.capturedImageView}>
-                                    <img src={capturedImage} alt="拍摄的照片"/>
-                                </div>
-                                <div className={styles.capturedControls}>
-                                    <button onClick={retakePhoto}
-                                            className={`${styles.controlButton} ${styles.retakeButton}`}>
-                                        <div className={styles.controlButtonIcon}>
-                                            <RotateCcw/>
-                                        </div>
-                                        <span>重拍</span>
-                                    </button>
-                                    <button onClick={confirmUpload}
-                                            className={`${styles.controlButton} ${styles.confirmButton}`}>
-                                        <div className={styles.controlButtonIcon}>
-                                            <Check/>
-                                        </div>
-                                        <span>确认上传</span>
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                )}
             </div>
         </div>
     );
