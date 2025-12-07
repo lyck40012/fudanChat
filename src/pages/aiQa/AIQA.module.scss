@@ -35,10 +35,9 @@
 }
 
 .homeButton {
-  display: flex;
+ display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
   padding: 12px 24px;
   background-color: rgba(30, 41, 59, 0.5);
   border: 2px solid transparent;
