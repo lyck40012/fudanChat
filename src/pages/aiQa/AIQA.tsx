@@ -189,30 +189,31 @@ const AIQA = () => {
         }
     };
 
-    const handleSendText = () => {
-        if (textInput.trim()) {
-            const userMsg: Message = {
-                id: messages.length + 1,
-                role: 'user',
-                content: textInput
-            };
-            // setMessages(prev => [...prev, userMsg]);
-            setTextInput('');
-            setTimeout(() => {
-                const aiMsg: Message = {
-                    id: messages.length + 2,
-                    role: 'ai',
-                    content: '感谢您的提问！这是一个示例回复。在实际应用中，这里会显示AI的智能回答。'
-                };
-                // setMessages(prev => [...prev, aiMsg]);
-            }, 1000);
+    const handleSendText = async () => {
+        // loading 中或无输入时不触发
+        if (loading || !textInput.trim()) return;
+
+        const userMsg = {
+            id: Date.now(),
+            role: 'user',
+            content: textInput,
+            content_type: 'text'
+        };
+
+        setTextInput('');
+
+        try {
+            await start(userMsg);
+        } catch (error) {
+            console.error('调用chat接口失败:', error);
+            message.error('请求失败');
         }
     };
 
-    const handleKeyPress = (e: React.KeyboardEvent) => {
+    const handleKeyPress = async (e: React.KeyboardEvent) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            handleSendText();
+            await handleSendText();
         }
     };
 
