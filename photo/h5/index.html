@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>摄像头拍照系统</title>
+    <link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>摄像头拍照系统</h1>
+        </header>
+
+        <main>
+            <section class="video-section">
+                <div class="video-container">
+                    <img id="video-stream" src="" alt="摄像头画面">
+                    <div id="video-loading" class="video-loading">
+                        <span>正在连接摄像头...</span>
+                    </div>
+                </div>
+                <button id="capture-btn" class="capture-button" disabled>
+                    拍照
+                </button>
+            </section>
+
+            <section class="photos-section">
+                <h2>已拍摄照片 (<span id="photo-count">0</span>)</h2>
+                <div id="photos-grid" class="photos-grid">
+                </div>
+            </section>
+        </main>
+
+        <div id="preview-modal" class="modal">
+            <div class="modal-content">
+                <span class="modal-close">&times;</span>
+                <img id="preview-image" src="" alt="照片预览">
+            </div>
+        </div>
+
+        <div id="toast" class="toast"></div>
+    </div>
+
+    <script src="./js/config.js"></script>
+    <script src="./js/main.js"></script>
+</body>
+</html>
