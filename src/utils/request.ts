@@ -46,4 +46,33 @@ service.interceptors.response.use(
   }
 );
 
+// 通用请求方法
+interface RequestOptions {
+  url: string;
+  method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+  params?: any; // GET 请求的查询参数
+  data?: any; // POST/PUT/PATCH 请求的请求体数据
+}
+
+/**
+ * 通用请求方法
+ * @param options 请求配置
+ * @returns Promise
+ */
+export const request = async <T = any>(options: RequestOptions): Promise<T> => {
+  const { url, method = 'GET', params, data } = options;
+
+  try {
+    const response = await service({
+      url,
+      method,
+      params, // GET 请求参数
+      data // POST/PUT/PATCH 请求体
+    });
+    return response.data;
+  } catch (error) {
+    return Promise.reject(error);
+  }
+};
+
 export default service;

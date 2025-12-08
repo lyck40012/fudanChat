@@ -143,7 +143,6 @@ const VoiceCall = () => {
     if (!content) return;
     // 保存最新的转写结果
     setTranscript(content);
-
   };
 
   // 绑定 Coze 事件（语音转写、静音状态、错误处理）
