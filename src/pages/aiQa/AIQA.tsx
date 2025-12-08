@@ -14,6 +14,7 @@ import {
 
 import {CommonErrorEvent, TranscriptionsMessageUpdateEvent, WebsocketsEventType} from "@coze/api";
 import { useChatSSE } from '../../hooks/useChatSSE'
+import { CameraCaptureModal } from './CameraCaptureModal'
 type InputMode = 'voice' | 'file' | 'camera' | 'text';
 type VoiceStatus = 'idle' | 'recording' | 'processing';
 
@@ -24,6 +25,8 @@ interface Message {
     imageUrl?: string;
     fileName?: string;
 }
+
+const PHOTO_API_BASE = 'http://127.0.0.1:5000';
 
 const AIQA = () => {
     const navigate = useNavigate();
@@ -36,6 +39,7 @@ const AIQA = () => {
     const [hasPermission, setHasPermission] = useState<boolean | null>(null);
     const [denoiserSupported, setDenoiserSupported] = useState<boolean>(false);
     const [recognizeResult,setRecognizeResult] = useState<Message>({} as Message) //暂存语音识别结果
+    const [cameraModalVisible, setCameraModalVisible] = useState(false);
     const clientRef = useRef<WsTranscriptionClient>();
     const {
         messages,
@@ -166,6 +170,19 @@ const AIQA = () => {
 
     };
 
+    const openCamera = () => {
+        // setCurrentMode('camera');
+        setCameraModalVisible(true);
+    };
+
+    const closeCamera = () => {
+        setCameraModalVisible(false);
+    };
+
+    const handleCapturedImage = (url: string) => {
+        setCurrentMode('text');
+    };
+
     const handleFileUpload: UploadProps['onChange'] = (info) => {
         let newFileList = [...info.fileList];
 
@@ -229,13 +246,14 @@ const AIQA = () => {
     };
 
     const handleSendText = async () => {
+        const content = textInput.trim();
         // loading 中或无输入时不触发
-        if (loading || !textInput.trim()) return;
+        if (loading || !content) return;
 
         const userMsg = {
             id: Date.now(),
             role: 'user',
-            content: textInput,
+            content,
             content_type: 'text'
         };
 
@@ -276,6 +294,7 @@ const AIQA = () => {
     };
 
     return (
+        <>
         <div className={styles.container}>
             <div className={styles.contentWrapper}>
                 <div className={styles.topNav}>
@@ -394,7 +413,6 @@ const AIQA = () => {
 
                             <Upload {...uploadProps}>
                                 <button
-                                    onClick={() => switchMode('file')}
                                     className={getToolbarButtonClasses('file')}
                                 >
                                     <div className={styles.toolbarIconWrapper}>
@@ -407,7 +425,7 @@ const AIQA = () => {
                                 </button>
                             </Upload>
 
-                            <div className={getToolbarButtonClasses('camera')}>
+                            <button onClick={openCamera} className={getToolbarButtonClasses('camera')}>
                                 <div className={styles.toolbarIconWrapper}>
                                     <Camera/>
                                 </div>
@@ -415,7 +433,7 @@ const AIQA = () => {
                                     <h3>拍摄</h3>
                                     <p>拍照上传报告</p>
                                 </div>
-                            </div>
+                            </button>
 
                             <button onClick={() => switchMode('text')} className={getToolbarButtonClasses('text')}>
                                 <div className={styles.toolbarIconWrapper}>
@@ -435,6 +453,13 @@ const AIQA = () => {
                 </div>
             </div>
         </div>
+        <CameraCaptureModal
+            visible={cameraModalVisible}
+            onClose={closeCamera}
+            onCaptured={handleCapturedImage}
+            baseUrl={PHOTO_API_BASE}
+        />
+        </>
     );
 };
 
