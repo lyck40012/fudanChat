@@ -256,8 +256,12 @@ const AIQA = () => {
 
                         <div className={styles.messageList}>
                             <div className={styles.messageListInner}>
-                                {messages.map((message) => (
-                                    <div key={message.id} className={`${styles.messageRow} ${styles[message.role]}`}>
+                                {messages.map((message, index) => {
+                                    const isLast = index === messages.length - 1;
+                                    const hasContent = !!message.content?.trim();
+                                    const showLoadingBubble = loading && isLast && message.role === 'ai' && !hasContent;
+                                    return (
+                                    <div key={message.id} className={`${styles.messageRow} ${styles[message.role]} ${showLoadingBubble ? styles.loadingMessage : ''}`}>
                                         {message.role !== 'system' && (
                                             <div className={`${styles.avatar} ${styles[message.role]}`}>
                                                 {message.role === 'user' ? <User/> : <Bot/>}
@@ -269,27 +273,22 @@ const AIQA = () => {
                                                     <p>📄 {message.content}</p>
                                                 </div>
                                             ) : (
-                                                <div className={`${styles.messageBubble} ${styles[message.role]}`}>
+                                                <div className={`${styles.messageBubble} ${styles[message.role]} ${showLoadingBubble ? styles.loadingBubble : ''}`}>
+                                                    {showLoadingBubble && <div className={styles.bubbleSpinner}></div>}
                                                     {message.imageUrl && (
                                                         <img src={message.imageUrl} alt="上传的图片"
                                                              className={styles.messageImage}/>
                                                     )}
-                                                    <p className={styles.messageText}>{message.content}</p>
+                                                    <p className={styles.messageText}>{showLoadingBubble ? 'AI 正在生成...' : message.content}</p>
                                                 </div>
                                             )}
                                         </div>
                                     </div>
-                                ))}
+                                )})}
                             </div>
                         </div>
 
                         <div className={styles.statusBar}>
-                            {loading && (
-                                <div className={`${styles.statusIndicator} ${styles.loadingIndicator}`}>
-                                    <div className={styles.spinner}></div>
-                                    <span>🤖 AI 正在回答，请稍候...</span>
-                                </div>
-                            )}
                             {voiceStatus === 'recording' && (
                                 <div className={`${styles.statusIndicator} ${styles.recordingIndicator}`}>
                                     <div className={styles.dot}></div>
