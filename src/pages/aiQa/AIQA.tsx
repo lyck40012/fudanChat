@@ -11,13 +11,13 @@ import {
 } from "@coze/api/ws-tools";
 
 import {CommonErrorEvent, TranscriptionsMessageUpdateEvent, WebsocketsEventType} from "@coze/api";
-
+import { useChatSSE } from '../../hooks/useChatSSE'
 type InputMode = 'voice' | 'file' | 'camera' | 'text';
 type VoiceStatus = 'idle' | 'recording' | 'processing';
 
 interface Message {
     id: number;
-    type: 'user' | 'ai' | 'system';
+    role: 'user' | 'ai' | 'system';
     content: string;
     imageUrl?: string;
     fileName?: string;
@@ -26,9 +26,9 @@ interface Message {
 const AIQA = () => {
     const navigate = useNavigate();
     const [currentMode, setCurrentMode] = useState<InputMode>('text');
-    const [messages, setMessages] = useState<Message[]>([
-        {id: 1, type: 'ai', content: '您好！我是AI数字人助手，您可以通过语音、文字、上传文件或拍照来向我提问。'}
-    ]);
+    // const [messages, setMessages] = useState<Message[]>([
+    //     {id: 1, role: 'ai', content: '您好！我是AI数字人助手，您可以通过语音、文字、上传文件或拍照来向我提问。'}
+    // ]);
     const [textInput, setTextInput] = useState('');
     const [voiceStatus, setVoiceStatus] = useState<VoiceStatus>('idle');
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -38,6 +38,15 @@ const AIQA = () => {
     const [denoiserSupported, setDenoiserSupported] = useState<boolean>(false);
     const [recognizeResult,setRecognizeResult] = useState<Message>({} as Message) //暂存语音识别结果
     const clientRef = useRef<WsTranscriptionClient>();
+    const {
+        messages,
+        loading,
+        error,
+        start,
+        stop
+    } = useChatSSE({
+        url: 'https://api.coze.cn/v3/chat',
+    })
     useEffect(() => {
         //获取权限
         checkRequirements()
@@ -92,13 +101,14 @@ const AIQA = () => {
             message.info('当前浏览器不支持AI降噪，将使用浏览器内置降噪');
         }
         // 监听转录结果更新
-        client.on(WebsocketsEventType.TRANSCRIPTIONS_MESSAGE_UPDATE,(event: unknown) => {
+        client.on(WebsocketsEventType.TRANSCRIPTIONS_MESSAGE_UPDATE,(event: any) => {
             const userMsg: Message = {
-                id: (event as TranscriptionsMessageUpdateEvent).data.logid,
-                type: 'user',
-                content: (event as TranscriptionsMessageUpdateEvent).data.content,
+                logid: event.detail.logid,
+                id:event.id,
+                role: 'user',
+                content: event.data.content,
+                content_type:'text'
             };
-            console.log(userMsg)
             setRecognizeResult(userMsg)
             },
         );
@@ -131,7 +141,7 @@ const AIQA = () => {
         setVoiceStatus('recording');
     };
 
-    const stopRecording = () => {
+    const stopRecording = async () => {
         if (currentMode !== 'voice' || voiceStatus !== 'recording') return;
         const pressDuration = pressStartTimeRef.current ? Date.now() - pressStartTimeRef.current : 0;
         pressStartTimeRef.current = null;
@@ -142,9 +152,18 @@ const AIQA = () => {
             return;
         }
         setVoiceStatus('processing')
+        console.log("recognizeResult=======>",recognizeResult)
+        // 调用 /v3/chat 接口
+        try {
+            start(recognizeResult)
+        } catch (error) {
+            console.error('调用chat接口失败:', error);
+            message.error('请求失败');
+        }
         setVoiceStatus('idle');
-        if(Object.keys(recognizeResult).length) setMessages(prev => [...prev, recognizeResult]);
+        // if(Object.keys(recognizeResult).length) setMessages(prev => [...prev, recognizeResult]);
         setRecognizeResult({} as Message)
+
     };
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -152,18 +171,18 @@ const AIQA = () => {
         if (file) {
             const systemMsg: Message = {
                 id: messages.length + 1,
-                type: 'system',
+                role: 'system',
                 content: `已上传文件：${file.name}`,
                 fileName: file.name
             };
-            setMessages(prev => [...prev, systemMsg]);
+            // setMessages(prev => [...prev, systemMsg]);
             setTimeout(() => {
                 const aiMsg: Message = {
                     id: messages.length + 2,
-                    type: 'ai',
+                    role: 'ai',
                     content: '我已经收到您的文件。您可以问我：\n• 帮我总结文件要点\n• 提取关键时间\n• 找出费用明细'
                 };
-                setMessages(prev => [...prev, aiMsg]);
+                // setMessages(prev => [...prev, aiMsg]);
             }, 1000);
         }
     };
@@ -172,18 +191,18 @@ const AIQA = () => {
         if (textInput.trim()) {
             const userMsg: Message = {
                 id: messages.length + 1,
-                type: 'user',
+                role: 'user',
                 content: textInput
             };
-            setMessages(prev => [...prev, userMsg]);
+            // setMessages(prev => [...prev, userMsg]);
             setTextInput('');
             setTimeout(() => {
                 const aiMsg: Message = {
                     id: messages.length + 2,
-                    type: 'ai',
+                    role: 'ai',
                     content: '感谢您的提问！这是一个示例回复。在实际应用中，这里会显示AI的智能回答。'
                 };
-                setMessages(prev => [...prev, aiMsg]);
+                // setMessages(prev => [...prev, aiMsg]);
             }, 1000);
         }
     };
@@ -214,7 +233,6 @@ const AIQA = () => {
         return classNames.join(' ');
     };
 
-    console.log("messages=========>",messages)
     return (
         <div className={styles.container}>
             <div className={styles.contentWrapper}>
@@ -236,19 +254,19 @@ const AIQA = () => {
                         <div className={styles.messageList}>
                             <div className={styles.messageListInner}>
                                 {messages.map((message) => (
-                                    <div key={message.id} className={`${styles.messageRow} ${styles[message.type]}`}>
-                                        {message.type !== 'system' && (
-                                            <div className={`${styles.avatar} ${styles[message.type]}`}>
-                                                {message.type === 'user' ? <User/> : <Bot/>}
+                                    <div key={message.id} className={`${styles.messageRow} ${styles[message.role]}`}>
+                                        {message.role !== 'system' && (
+                                            <div className={`${styles.avatar} ${styles[message.role]}`}>
+                                                {message.role === 'user' ? <User/> : <Bot/>}
                                             </div>
                                         )}
-                                        <div className={`${styles.messageContentWrapper} ${styles[message.type]}`}>
-                                            {message.type === 'system' ? (
+                                        <div className={`${styles.messageContentWrapper} ${styles[message.role]}`}>
+                                            {message.role === 'system' ? (
                                                 <div className={`${styles.messageBubble} ${styles.system}`}>
                                                     <p>📄 {message.content}</p>
                                                 </div>
                                             ) : (
-                                                <div className={`${styles.messageBubble} ${styles[message.type]}`}>
+                                                <div className={`${styles.messageBubble} ${styles[message.role]}`}>
                                                     {message.imageUrl && (
                                                         <img src={message.imageUrl} alt="上传的图片"
                                                              className={styles.messageImage}/>
