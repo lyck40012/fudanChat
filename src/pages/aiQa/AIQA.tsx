@@ -135,6 +135,8 @@ const AIQA = () => {
 
 
     const startRecording = () => {
+        // 正在生成回答时不允许再次录音
+        if (loading) return;
         if (currentMode !== 'voice') return;
         pressStartTimeRef.current = Date.now();
         clientRef.current.start()
@@ -281,6 +283,12 @@ const AIQA = () => {
                         </div>
 
                         <div className={styles.statusBar}>
+                            {loading && (
+                                <div className={`${styles.statusIndicator} ${styles.loadingIndicator}`}>
+                                    <div className={styles.spinner}></div>
+                                    <span>🤖 AI 正在回答，请稍候...</span>
+                                </div>
+                            )}
                             {voiceStatus === 'recording' && (
                                 <div className={`${styles.statusIndicator} ${styles.recordingIndicator}`}>
                                     <div className={styles.dot}></div>
@@ -305,9 +313,10 @@ const AIQA = () => {
                       onKeyPress={handleKeyPress}
                       placeholder="请输入您的问题..."
                       className={styles.textInput}
+                      disabled={loading}
                       rows={2}
                   />
-                                    <button onClick={handleSendText} className={styles.sendButton}>
+                                    <button onClick={handleSendText} className={styles.sendButton} disabled={loading}>
                                         <Send/>
                                     </button>
                                 </div>
