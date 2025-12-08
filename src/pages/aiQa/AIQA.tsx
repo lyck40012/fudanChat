@@ -1,7 +1,9 @@
 import React, {useState, useRef, useEffect} from 'react';
 import {useNavigate} from 'react-router-dom';
-import {Home, Mic, Upload, Camera, Keyboard, User, Bot, Send} from 'lucide-react';
-import {message} from 'antd';
+import {Home, Mic, Camera, Keyboard, User, Bot, Send} from 'lucide-react';
+import {message, Upload} from 'antd';
+import {UploadOutlined} from '@ant-design/icons';
+import type {UploadFile, UploadProps} from 'antd';
 import styles from './AIQA.module.scss';
 import {
     AIDenoiserProcessorLevel,
@@ -31,7 +33,7 @@ const AIQA = () => {
     // ]);
     const [textInput, setTextInput] = useState('');
     const [voiceStatus, setVoiceStatus] = useState<VoiceStatus>('idle');
-    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [fileList, setFileList] = useState<UploadFile[]>([]);
     const pressStartTimeRef = useRef<number | null>(null);
     const [selectedInputDevice, setSelectedInputDevice] = useState<string>('');
     const [hasPermission, setHasPermission] = useState<boolean | null>(null);
@@ -168,25 +170,66 @@ const AIQA = () => {
 
     };
 
-    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
+    const handleFileUpload: UploadProps['onChange'] = (info) => {
+        let newFileList = [...info.fileList];
+
+        // 限制只保留最新的一个文件
+        newFileList = newFileList.slice(-1);
+
+        setFileList(newFileList);
+
+        if (info.file.status === 'done' || info.file.originFileObj) {
+            const file = info.file.originFileObj || info.file;
+            message.success(`${info.file.name} 文件上传成功`);
+
             const systemMsg: Message = {
                 id: messages.length + 1,
                 role: 'system',
-                content: `已上传文件：${file.name}`,
-                fileName: file.name
+                content: `已上传文件：${info.file.name}`,
+                fileName: info.file.name
             };
-            // setMessages(prev => [...prev, systemMsg]);
+
             setTimeout(() => {
                 const aiMsg: Message = {
                     id: messages.length + 2,
                     role: 'ai',
                     content: '我已经收到您的文件。您可以问我：\n• 帮我总结文件要点\n• 提取关键时间\n• 找出费用明细'
                 };
-                // setMessages(prev => [...prev, aiMsg]);
             }, 1000);
+        } else if (info.file.status === 'error') {
+            message.error(`${info.file.name} 文件上传失败`);
         }
+    };
+
+    const uploadProps: UploadProps = {
+        fileList,
+        onChange: handleFileUpload,
+        beforeUpload: (file) => {
+            const isValidType = [
+                'application/pdf',
+                'image/jpeg',
+                'image/jpg',
+                'image/png',
+                'application/msword',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            ].includes(file.type);
+
+            if (!isValidType) {
+                message.error('只支持上传 PDF、图片、Word 文件!');
+                return Upload.LIST_IGNORE;
+            }
+
+            const isLt10M = file.size / 1024 / 1024 < 10;
+            if (!isLt10M) {
+                message.error('文件大小不能超过 10MB!');
+                return Upload.LIST_IGNORE;
+            }
+
+            // 不自动上传,只做本地处理
+            return false;
+        },
+        showUploadList: false,
+        maxCount: 1,
     };
 
     const handleSendText = async () => {
@@ -353,28 +396,20 @@ const AIQA = () => {
                                 </div>
                             </button>
 
-                            <button
-                                onClick={() => {
-                                    switchMode('file');
-                                    fileInputRef.current?.click();
-                                }}
-                                className={getToolbarButtonClasses('file')}
-                            >
-                                <div className={styles.toolbarIconWrapper}>
-                                    <Upload/>
-                                </div>
-                                <div className={styles.toolbarText}>
-                                    <h3>上传文件</h3>
-                                    <p>支持PDF、图片等文件</p>
-                                </div>
-                            </button>
-                            <input
-                                ref={fileInputRef}
-                                type="file"
-                                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                                onChange={handleFileUpload}
-                                className={styles.fileInput}
-                            />
+                            <Upload {...uploadProps}>
+                                <button
+                                    onClick={() => switchMode('file')}
+                                    className={getToolbarButtonClasses('file')}
+                                >
+                                    <div className={styles.toolbarIconWrapper}>
+                                        <UploadOutlined style={{fontSize: '28px'}}/>
+                                    </div>
+                                    <div className={styles.toolbarText}>
+                                        <h3>上传文件</h3>
+                                        <p>支持PDF、图片等文件</p>
+                                    </div>
+                                </button>
+                            </Upload>
 
                             <div className={getToolbarButtonClasses('camera')}>
                                 <div className={styles.toolbarIconWrapper}>
