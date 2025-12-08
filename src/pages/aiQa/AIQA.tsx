@@ -28,9 +28,6 @@ interface Message {
 const AIQA = () => {
     const navigate = useNavigate();
     const [currentMode, setCurrentMode] = useState<InputMode>('text');
-    // const [messages, setMessages] = useState<Message[]>([
-    //     {id: 1, role: 'ai', content: '您好！我是AI数字人助手，您可以通过语音、文字、上传文件或拍照来向我提问。'}
-    // ]);
     const [textInput, setTextInput] = useState('');
     const [voiceStatus, setVoiceStatus] = useState<VoiceStatus>('idle');
     const [fileList, setFileList] = useState<UploadFile[]>([]);
@@ -165,7 +162,6 @@ const AIQA = () => {
             message.error('请求失败');
         }
         setVoiceStatus('idle');
-        // if(Object.keys(recognizeResult).length) setMessages(prev => [...prev, recognizeResult]);
         setRecognizeResult({} as Message)
 
     };
