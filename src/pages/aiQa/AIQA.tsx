@@ -24,6 +24,7 @@ interface Message {
     role: 'user' | 'ai' | 'system';
     content: string;
     imageUrl?: string;
+    imageUrls?: string[];  // 支持多张图片
     fileName?: string;
 }
 
@@ -261,14 +262,28 @@ const AIQA = () => {
         // loading 中或无输入时不触发
         if (loading || !content) return;
 
+        // 收集文件列表中的图片URL
+        const imageUrls: string[] = [];
+        fileList.forEach(file => {
+            if (isImageFile(file)) {
+                const url = getFilePreviewUrl(file);
+                if (url) {
+                    imageUrls.push(url);
+                }
+            }
+        });
+
         const userMsg = {
             id: Date.now(),
             role: 'user',
             content,
-            content_type: 'text'
+            content_type: 'text',
+            imageUrls: imageUrls.length > 0 ? imageUrls : undefined
         };
 
         setTextInput('');
+        // 清空文件列表
+        setFileList([]);
 
         try {
             await start(userMsg);
@@ -344,10 +359,38 @@ const AIQA = () => {
                                             ) : (
                                                 <div className={`${styles.messageBubble} ${styles[message.role]} ${showLoadingBubble ? styles.loadingBubble : ''}`}>
                                                     {showLoadingBubble && <div className={styles.bubbleSpinner}></div>}
-                                                    {message.imageUrl && (
-                                                        <img src={message.imageUrl} alt="上传的图片"
-                                                             className={styles.messageImage}/>
+
+                                                    {/* 单张图片兼容 */}
+                                                    {message.imageUrl && !message.imageUrls && (
+                                                        <Image
+                                                            src={message.imageUrl}
+                                                            alt="上传的图片"
+                                                            className={styles.messageImage}
+                                                            preview={{
+                                                                mask: '预览'
+                                                            }}
+                                                        />
                                                     )}
+
+                                                    {/* 多张图片 */}
+                                                    {message.imageUrls && message.imageUrls.length > 0 && (
+                                                        <div className={styles.messageImagesGrid}>
+                                                            <Image.PreviewGroup>
+                                                                {message.imageUrls.map((url, idx) => (
+                                                                    <Image
+                                                                        key={idx}
+                                                                        src={url}
+                                                                        alt={`图片 ${idx + 1}`}
+                                                                        className={styles.messageImage}
+                                                                        preview={{
+                                                                            mask: '预览'
+                                                                        }}
+                                                                    />
+                                                                ))}
+                                                            </Image.PreviewGroup>
+                                                        </div>
+                                                    )}
+
                                                     <p className={styles.messageText}>{showLoadingBubble ? 'AI 正在生成...' : message.content}</p>
                                                 </div>
                                             )}
