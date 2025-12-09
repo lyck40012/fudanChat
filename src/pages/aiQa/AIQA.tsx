@@ -1,9 +1,10 @@
 import React, {useState, useRef, useEffect} from 'react';
 import {useNavigate} from 'react-router-dom';
 import {Home, Mic, Camera, Keyboard, User, Bot, Send} from 'lucide-react';
-import {message, Upload} from 'antd';
-import {UploadOutlined} from '@ant-design/icons';
+import {message, Upload, Image, Typography} from 'antd';
+import {UploadOutlined, CloseCircleFilled, FileTextOutlined} from '@ant-design/icons';
 import type {UploadFile, UploadProps} from 'antd';
+const { Text } = Typography;
 import styles from './AIQA.module.scss';
 import {
     AIDenoiserProcessorLevel,
@@ -186,37 +187,62 @@ const AIQA = () => {
     const handleFileUpload: UploadProps['onChange'] = (info) => {
         let newFileList = [...info.fileList];
 
-        // 限制只保留最新的一个文件
-        newFileList = newFileList.slice(-1);
+        // 限制最多上传3个文件
+        newFileList = newFileList.slice(-3);
 
         setFileList(newFileList);
 
-        if (info.file.status === 'done' || info.file.originFileObj) {
-            const file = info.file.originFileObj || info.file;
+        if (info.file.status === 'uploading') {
+            console.log('文件上传中:', info.file.name);
+        } else if (info.file.status === 'done') {
+            console.log('上传成功,服务器响应:', info.file.response);
             message.success(`${info.file.name} 文件上传成功`);
 
-            const systemMsg: Message = {
-                id: messages.length + 1,
-                role: 'system',
-                content: `已上传文件：${info.file.name}`,
-                fileName: info.file.name
-            };
-
-            setTimeout(() => {
-                const aiMsg: Message = {
-                    id: messages.length + 2,
-                    role: 'ai',
-                    content: '我已经收到您的文件。您可以问我：\n• 帮我总结文件要点\n• 提取关键时间\n• 找出费用明细'
-                };
-            }, 1000);
+            // 保存文件ID供后续使用
+            if (info.file.response && info.file.response.data) {
+                const fileId = info.file.response.data.id;
+                console.log('文件ID:', fileId);
+                // 可以在这里保存 fileId 到 state 中
+            }
         } else if (info.file.status === 'error') {
-            message.error(`${info.file.name} 文件上传失败`);
+            console.error('上传失败:', info.file.error);
+            message.error(`${info.file.name} 文件上传失败: ${info.file.error?.message || '未知错误'}`);
         }
+    };
+
+    // 移除文件
+    const handleRemoveFile = (file: UploadFile) => {
+        const newFileList = fileList.filter(item => item.uid !== file.uid);
+        setFileList(newFileList);
+        message.info(`已移除 ${file.name}`);
+    };
+
+    // 判断文件是否为图片
+    const isImageFile = (file: UploadFile) => {
+        return file.type?.startsWith('image/');
+    };
+
+    // 获取文件预览URL
+    const getFilePreviewUrl = (file: UploadFile) => {
+        if (file.originFileObj) {
+            return URL.createObjectURL(file.originFileObj);
+        }
+        return file.url || '';
     };
 
     const uploadProps: UploadProps = {
         fileList,
         onChange: handleFileUpload,
+        action: 'https://api.coze.cn/v1/files/upload',
+        headers: {
+            'Authorization': 'Bearer pat_hD3fk5ygNuFPLz5ndwIKYWmwY8qgET9DrruIA3Ean8cCEPfSi6o40EZmMg03TS5P'
+        },
+        name: 'file',
+        data: (file) => {
+            const formData = new FormData();
+            formData.append('file', file);
+            return formData;
+        },
         beforeUpload: (file) => {
             const isValidType = [
                 'application/pdf',
@@ -238,11 +264,11 @@ const AIQA = () => {
                 return Upload.LIST_IGNORE;
             }
 
-            // 不自动上传,只做本地处理
-            return false;
+            return true;
         },
         showUploadList: false,
-        maxCount: 1,
+        maxCount: 3,
+        multiple: true,
     };
 
     const handleSendText = async () => {
@@ -364,19 +390,60 @@ const AIQA = () => {
                                 </div>
                             )}
                             {currentMode === 'text' && voiceStatus === 'idle' && (
-                                <div className={styles.textInputContainer}>
-                  <textarea
-                      value={textInput}
-                      onChange={(e) => setTextInput(e.target.value)}
-                      onKeyPress={handleKeyPress}
-                      placeholder="请输入您的问题..."
-                      className={styles.textInput}
-                      disabled={loading}
-                      rows={2}
-                  />
-                                    <button onClick={handleSendText} className={styles.sendButton} disabled={loading}>
-                                        <Send/>
-                                    </button>
+                                <div className={styles.textInputWrapper}>
+                                    {/* 文件列表显示区域 */}
+                                    {fileList.length > 0 && (
+                                        <div className={styles.fileListContainer}>
+                                            {fileList.map((file) => (
+                                                <div key={file.uid} className={styles.fileItem}>
+                                                    {isImageFile(file) ? (
+                                                        <Image
+                                                            width={32}
+                                                            height={32}
+                                                            src={getFilePreviewUrl(file)}
+                                                            alt={file.name}
+                                                            style={{ borderRadius: '6px', objectFit: 'cover' }}
+                                                            preview={{
+                                                                mask: '预览'
+                                                            }}
+                                                        />
+                                                    ) : (
+                                                        <div className={styles.filePreview}>
+                                                            <FileTextOutlined className={styles.fileIcon} />
+                                                        </div>
+                                                    )}
+                                                    <div className={styles.fileInfo}>
+                                                        <Text className={styles.fileName} ellipsis={{ tooltip: file.name }}>
+                                                            {file.name}
+                                                        </Text>
+                                                        <Text className={styles.fileSize}>
+                                                            {file.size ? `${(file.size / 1024).toFixed(1)} KB` : ''}
+                                                        </Text>
+                                                    </div>
+                                                    <CloseCircleFilled
+                                                        className={styles.removeFileButton}
+                                                        onClick={() => handleRemoveFile(file)}
+                                                    />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* 输入框区域 */}
+                                    <div className={styles.textInputContainer}>
+                                        <textarea
+                                            value={textInput}
+                                            onChange={(e) => setTextInput(e.target.value)}
+                                            onKeyPress={handleKeyPress}
+                                            placeholder="请输入您的问题..."
+                                            className={styles.textInput}
+                                            disabled={loading}
+                                            rows={2}
+                                        />
+                                        <button onClick={handleSendText} className={styles.sendButton} disabled={loading}>
+                                            <Send/>
+                                        </button>
+                                    </div>
                                 </div>
                             )}
                             {voiceStatus === 'idle' && currentMode !== 'text' && (
