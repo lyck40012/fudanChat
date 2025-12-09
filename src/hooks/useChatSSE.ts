@@ -1,7 +1,11 @@
-import { useCallback, useRef, useState } from 'react'
+import {useCallback, useRef, useState} from 'react'
 
-export function useChatSSE({ url, headers = {} }) {
-    const [messages, setMessages] = useState<any[]>([{id: 1, role: 'ai', content: '您好！我是AI数字人助手，您可以通过语音、文字、上传文件或拍照来向我提问。'}])
+export function useChatSSE({url, headers = {}}) {
+    const [messages, setMessages] = useState<any[]>([{
+        id: 1,
+        role: 'ai',
+        content: '您好！我是AI数字人助手，您可以通过语音、文字、上传文件或拍照来向我提问。'
+    }])
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
@@ -36,12 +40,34 @@ export function useChatSSE({ url, headers = {} }) {
             }
         ])
 
+        let requestMessageArr = []
+        if (userMessage?.imageUrls && userMessage?.imageUrls.length) {
+            let arr = [{
+                type: 'text',
+                text: userMessage?.content || '',
+            }]
+
+            userMessage.imageUrls.forEach(x => {
+                arr.push({
+                    type: x.type.includes('image') ? "image" : 'file',
+                    file_id: x.response.data.id
+                })
+            })
+            requestMessageArr.push({
+                role:userMessage.role,
+                content_type:'object_string',
+                content:JSON.stringify(arr)
+            })
+        } else {
+            requestMessageArr.push(userMessage)
+        }
+        console.log("requestMessageArr====>",requestMessageArr)
         try {
             const response = await fetch(url, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    "Authorization":'Bearer pat_hD3fk5ygNuFPLz5ndwIKYWmwY8qgET9DrruIA3Ean8cCEPfSi6o40EZmMg03TS5P',
+                    "Authorization": 'Bearer pat_hD3fk5ygNuFPLz5ndwIKYWmwY8qgET9DrruIA3Ean8cCEPfSi6o40EZmMg03TS5P',
                     ...headers
                 },
                 body: JSON.stringify({
@@ -57,7 +83,7 @@ export function useChatSSE({ url, headers = {} }) {
                             }
                         ]
                     },
-                    additional_messages: [userMessage ]
+                    additional_messages: requestMessageArr
                 }),
                 signal: controller.signal
             })
@@ -68,10 +94,10 @@ export function useChatSSE({ url, headers = {} }) {
             let buffer = ''
 
             while (true) {
-                const { value, done } = await reader.read()
+                const {value, done} = await reader.read()
                 if (done) break
 
-                buffer += decoder.decode(value, { stream: true })
+                buffer += decoder.decode(value, {stream: true})
                 const events = buffer.split('\n\n')
                 buffer = events.pop() || ''
 

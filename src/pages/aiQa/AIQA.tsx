@@ -213,6 +213,7 @@ const AIQA = () => {
 
     // 获取文件预览URL
     const getFilePreviewUrl = (file: UploadFile) => {
+        console.log("file===>",file)
         if (file.originFileObj) {
             return URL.createObjectURL(file.originFileObj);
         }
@@ -261,24 +262,12 @@ const AIQA = () => {
         const content = textInput.trim();
         // loading 中或无输入时不触发
         if (loading || !content) return;
-
-        // 收集文件列表中的图片URL
-        const imageUrls: string[] = [];
-        fileList.forEach(file => {
-            if (isImageFile(file)) {
-                const url = getFilePreviewUrl(file);
-                if (url) {
-                    imageUrls.push(url);
-                }
-            }
-        });
-
         const userMsg = {
             id: Date.now(),
             role: 'user',
             content,
             content_type: 'text',
-            imageUrls: imageUrls.length > 0 ? imageUrls : undefined
+            imageUrls: fileList.length > 0 ? fileList : undefined
         };
 
         setTextInput('');
@@ -341,6 +330,7 @@ const AIQA = () => {
                         <div className={styles.messageList}>
                             <div className={styles.messageListInner}>
                                 {messages.map((message, index) => {
+                                    console.log('message=======>',message)
                                     const isLast = index === messages.length - 1;
                                     const hasContent = !!message.content?.trim();
                                     const showLoadingBubble = loading && isLast && message.role === 'ai' && !hasContent;
@@ -359,27 +349,13 @@ const AIQA = () => {
                                             ) : (
                                                 <div className={`${styles.messageBubble} ${styles[message.role]} ${showLoadingBubble ? styles.loadingBubble : ''}`}>
                                                     {showLoadingBubble && <div className={styles.bubbleSpinner}></div>}
-
-                                                    {/* 单张图片兼容 */}
-                                                    {message.imageUrl && !message.imageUrls && (
-                                                        <Image
-                                                            src={message.imageUrl}
-                                                            alt="上传的图片"
-                                                            className={styles.messageImage}
-                                                            preview={{
-                                                                mask: '预览'
-                                                            }}
-                                                        />
-                                                    )}
-
-                                                    {/* 多张图片 */}
                                                     {message.imageUrls && message.imageUrls.length > 0 && (
                                                         <div className={styles.messageImagesGrid}>
                                                             <Image.PreviewGroup>
                                                                 {message.imageUrls.map((url, idx) => (
                                                                     <Image
                                                                         key={idx}
-                                                                        src={url}
+                                                                        src={getFilePreviewUrl(url)}
                                                                         alt={`图片 ${idx + 1}`}
                                                                         className={styles.messageImage}
                                                                         preview={{
