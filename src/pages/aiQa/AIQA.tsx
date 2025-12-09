@@ -49,7 +49,7 @@ const AIQA = () => {
         start,
         stop
     } = useChatSSE({
-        url: 'https://api.coze.cn/v3/chat',
+        url: '/api/v3/chat',
     })
     useEffect(() => {
         //获取权限
@@ -186,24 +186,12 @@ const AIQA = () => {
 
     const handleFileUpload: UploadProps['onChange'] = (info) => {
         let newFileList = [...info.fileList];
-
-        // 限制最多上传3个文件
-        newFileList = newFileList.slice(-3);
-
         setFileList(newFileList);
-
         if (info.file.status === 'uploading') {
             console.log('文件上传中:', info.file.name);
         } else if (info.file.status === 'done') {
-            console.log('上传成功,服务器响应:', info.file.response);
             message.success(`${info.file.name} 文件上传成功`);
 
-            // 保存文件ID供后续使用
-            if (info.file.response && info.file.response.data) {
-                const fileId = info.file.response.data.id;
-                console.log('文件ID:', fileId);
-                // 可以在这里保存 fileId 到 state 中
-            }
         } else if (info.file.status === 'error') {
             console.error('上传失败:', info.file.error);
             message.error(`${info.file.name} 文件上传失败: ${info.file.error?.message || '未知错误'}`);
@@ -233,9 +221,9 @@ const AIQA = () => {
     const uploadProps: UploadProps = {
         fileList,
         onChange: handleFileUpload,
-        action: 'https://api.coze.cn/v1/files/upload',
+        action: '/api/v1/files/upload',
         headers: {
-            'Authorization': 'Bearer pat_hD3fk5ygNuFPLz5ndwIKYWmwY8qgET9DrruIA3Ean8cCEPfSi6o40EZmMg03TS5P'
+            'Authorization': 'Bearer pat_hD3fk5ygNuFPLz5ndwIKYWmwY8qgET9DrruIA3Ean8cCEPfSi6o40EZmMg03TS5P',
         },
         name: 'file',
         data: (file) => {
@@ -252,18 +240,15 @@ const AIQA = () => {
                 'application/msword',
                 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
             ].includes(file.type);
-
             if (!isValidType) {
                 message.error('只支持上传 PDF、图片、Word 文件!');
                 return Upload.LIST_IGNORE;
             }
-
             const isLt10M = file.size / 1024 / 1024 < 10;
             if (!isLt10M) {
                 message.error('文件大小不能超过 10MB!');
                 return Upload.LIST_IGNORE;
             }
-
             return true;
         },
         showUploadList: false,
