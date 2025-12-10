@@ -55,8 +55,7 @@ const AIQA = () => {
     const messageListRef = useRef<HTMLDivElement | null>(null);
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const [spokenMessageId, setSpokenMessageId] = useState<string | number | null>(null);
-    const [voiceId, setVoiceId] = useState<string>('');
-    const [voiceList, setVoiceList] = useState<any[]>([]);
+    const [voiceId, setVoiceId] = useState<string>('female-yufei');
     const [isAudioPlaying, setIsAudioPlaying] = useState(false);
     const {
         messages,
@@ -87,7 +86,7 @@ const AIQA = () => {
     useEffect(() => {
         const fetchVoices = async () => {
             try {
-                const res = await fetch('/api/v1/audio/voices', {
+                const res = await fetch('https://api.coze.cn/v1/audio/voices', {
                     method: 'GET',
                     headers: {
                         Authorization: 'Bearer pat_hD3fk5ygNuFPLz5ndwIKYWmwY8qgET9DrruIA3Ean8cCEPfSi6o40EZmMg03TS5P'
@@ -95,8 +94,8 @@ const AIQA = () => {
                 })
                 if (!res.ok) throw new Error(`拉取音色失败: ${res.status}`)
                 const data = await res.json()
-                let id = data?.data?.voice_list[0].voice_id
-                  if (id) setVoiceId(id)
+                const id = data?.data?.voice_list?.[0]?.voice_id
+                if (id) setVoiceId(id)
             } catch (err) {
                 console.error('获取音色失败', err)
             }
@@ -110,6 +109,7 @@ const AIQA = () => {
             audioRef.current.pause();
             audioRef.current = null;
         }
+        setIsAudioPlaying(false)
     }, []);
 
     const playSpeech = async (text: string) => {
@@ -122,7 +122,7 @@ const AIQA = () => {
                 audioRef.current = null;
             }
             setIsAudioPlaying(false)
-            const res = await fetch('/api/v1/audio/speech', {
+            const res = await fetch('https://api.coze.cn/v1/audio/speech', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -573,9 +573,6 @@ const AIQA = () => {
                                             <button onClick={handleSendText} className={styles.sendButton} disabled={loading}>
                                                 <Send/>
                                             </button>
-                                            <button onClick={stopSpeech} className={styles.stopAudioButton} disabled={!isAudioPlaying}>
-                                                <StopCircle />
-                                            </button>
                                         </div>
                                     </div>
                                 )}
@@ -642,6 +639,20 @@ const AIQA = () => {
                                     <div className={styles.toolbarText}>
                                         <h3>打字</h3>
                                         <p>使用键盘输入问题</p>
+                                    </div>
+                                </button>
+
+                                <button
+                                    onClick={stopSpeech}
+                                    className={`${styles.toolbarButton} ${styles.stopAudioToolbar}`}
+                                    disabled={!isAudioPlaying}
+                                >
+                                    <div className={styles.toolbarIconWrapper}>
+                                        <StopCircle/>
+                                    </div>
+                                    <div className={styles.toolbarText}>
+                                        <h3>停止播报</h3>
+                                        <p>立即打断当前语音</p>
                                     </div>
                                 </button>
                             </div>
