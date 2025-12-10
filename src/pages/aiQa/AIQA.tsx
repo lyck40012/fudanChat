@@ -32,11 +32,7 @@ const md = markdownit({ html: true, breaks: true });
 
 const renderMarkdown: any = (content) => {
     let result = content.trim()
-    return (
-        <Typography>
-            <div dangerouslySetInnerHTML={{ __html: md.render(result) }} />
-        </Typography>
-    );
+    return <div dangerouslySetInnerHTML={{ __html: md.render(result) }} />;
 };
 
 const AIQA = () => {
