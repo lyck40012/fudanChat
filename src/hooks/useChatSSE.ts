@@ -67,9 +67,10 @@ export function useChatSSE({url, headers = {}}) {
         } else {
             requestMessageArr.push(userMessage)
         }
-        console.log("requestMessageArr====>", requestMessageArr)
+
+        const requestUrl =  `${url}?conversation_id=${conversationIdRef.current}`
         try {
-            const response = await fetch(url, {
+            const response = await fetch(requestUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
