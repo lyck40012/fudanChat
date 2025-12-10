@@ -52,6 +52,7 @@ const AIQA = () => {
     const [recognizeResult,setRecognizeResult] = useState<Message>({} as Message) //暂存语音识别结果
     const [cameraModalVisible, setCameraModalVisible] = useState(false);
     const clientRef = useRef<WsTranscriptionClient>();
+    const messageListRef = useRef<HTMLDivElement | null>(null);
     const {
         messages,
         loading,
@@ -67,6 +68,15 @@ const AIQA = () => {
         //获取麦克风设备
         getDevices();
     }, []);
+
+    useEffect(() => {
+        if (messageListRef.current) {
+            messageListRef.current.scrollTo({
+                top: messageListRef.current.scrollHeight,
+                behavior: 'smooth'
+            });
+        }
+    }, [messages]);
 
     const checkRequirements = async () => {
         // 检查麦克风权限
@@ -344,7 +354,7 @@ const AIQA = () => {
                                 </p>
                             </div>
 
-                            <div className={styles.messageList}>
+                            <div className={styles.messageList} ref={messageListRef}>
                                 <div className={styles.messageListInner}>
                                     {messages.map((message, index) => {
                                         console.log('message=======>',message)
