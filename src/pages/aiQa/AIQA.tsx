@@ -1,6 +1,6 @@
 import React, {useState, useRef, useEffect} from 'react';
 import {useNavigate} from 'react-router-dom';
-import {Home, Mic, Camera, Keyboard, User, Bot, Send} from 'lucide-react';
+import {Home, Mic, Camera, Keyboard, User, Bot, Send, StopCircle} from 'lucide-react';
 import {message, Upload, Image, Typography} from 'antd';
 import {UploadOutlined, CloseCircleFilled, FileTextOutlined} from '@ant-design/icons';
 import type {UploadFile, UploadProps} from 'antd';
@@ -21,7 +21,7 @@ type InputMode = 'voice' | 'file' | 'camera' | 'text';
 type VoiceStatus = 'idle' | 'recording' | 'processing';
 
 interface Message {
-    id: number;
+    id: number | string;
     role: 'user' | 'ai' | 'system';
     content: string;
     imageUrl?: string;
@@ -53,6 +53,11 @@ const AIQA = () => {
     const [cameraModalVisible, setCameraModalVisible] = useState(false);
     const clientRef = useRef<WsTranscriptionClient>();
     const messageListRef = useRef<HTMLDivElement | null>(null);
+    const audioRef = useRef<HTMLAudioElement | null>(null);
+    const [spokenMessageId, setSpokenMessageId] = useState<string | number | null>(null);
+    const [voiceId, setVoiceId] = useState<string>('');
+    const [voiceList, setVoiceList] = useState<any[]>([]);
+    const [isAudioPlaying, setIsAudioPlaying] = useState(false);
     const {
         messages,
         loading,
@@ -77,6 +82,101 @@ const AIQA = () => {
             });
         }
     }, [messages]);
+
+    // 拉取可用音色列表
+    useEffect(() => {
+        const fetchVoices = async () => {
+            try {
+                const res = await fetch('/api/v1/audio/voices', {
+                    method: 'GET',
+                    headers: {
+                        Authorization: 'Bearer pat_hD3fk5ygNuFPLz5ndwIKYWmwY8qgET9DrruIA3Ean8cCEPfSi6o40EZmMg03TS5P'
+                    },
+                })
+                if (!res.ok) throw new Error(`拉取音色失败: ${res.status}`)
+                const data = await res.json()
+                let id = data?.data?.voice_list[0].voice_id
+                  if (id) setVoiceId(id)
+            } catch (err) {
+                console.error('获取音色失败', err)
+            }
+        }
+        fetchVoices()
+    }, [])
+
+    // 组件卸载时清理音频资源
+    useEffect(() => () => {
+        if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current = null;
+        }
+    }, []);
+
+    const playSpeech = async (text: string) => {
+        if (!voiceId) return
+        if (!text?.trim()) return;
+        try {
+            // 先停止上一段音频
+            if (audioRef.current) {
+                audioRef.current.pause();
+                audioRef.current = null;
+            }
+            setIsAudioPlaying(false)
+            const res = await fetch('/api/v1/audio/speech', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: 'Bearer pat_hD3fk5ygNuFPLz5ndwIKYWmwY8qgET9DrruIA3Ean8cCEPfSi6o40EZmMg03TS5P'
+                },
+                body: JSON.stringify({
+                    voice_id: voiceId || '',
+                    response_format: 'mp3',
+                    input: text,
+                }),
+            })
+            if (!res.ok) {
+                throw new Error(`TTS 请求失败: ${res.status}`)
+            }
+            const buffer = await res.arrayBuffer()
+            const blob = new Blob([buffer], {type: 'audio/mpeg'})
+            const url = URL.createObjectURL(blob)
+            const audio = new Audio(url)
+            audioRef.current = audio
+            audio.onended = () => {
+                setIsAudioPlaying(false)
+                URL.revokeObjectURL(url)
+            }
+            audio.onerror = () => {
+                setIsAudioPlaying(false)
+                URL.revokeObjectURL(url)
+            }
+            await audio.play()
+            setIsAudioPlaying(true)
+        } catch (err) {
+            console.error('语音播放失败', err)
+            message.error('语音播放失败')
+            setIsAudioPlaying(false)
+        }
+    }
+
+    const stopSpeech = () => {
+        if (audioRef.current) {
+            audioRef.current.pause()
+            audioRef.current.currentTime = 0
+            audioRef.current = null
+        }
+        setIsAudioPlaying(false)
+    }
+
+    // 对话结束后自动播报最后一条 AI 回复
+    useEffect(() => {
+        if (loading) return
+        const lastAi = [...messages].reverse().find(m => m.role === 'ai' && m.content?.trim())
+        if (!lastAi) return
+        if (spokenMessageId === lastAi.id) return
+        playSpeech(lastAi.content)
+        setSpokenMessageId(lastAi.id)
+    }, [messages, loading, voiceId])
 
     const checkRequirements = async () => {
         // 检查麦克风权限
@@ -472,6 +572,9 @@ const AIQA = () => {
                                         />
                                             <button onClick={handleSendText} className={styles.sendButton} disabled={loading}>
                                                 <Send/>
+                                            </button>
+                                            <button onClick={stopSpeech} className={styles.stopAudioButton} disabled={!isAudioPlaying}>
+                                                <StopCircle />
                                             </button>
                                         </div>
                                     </div>
