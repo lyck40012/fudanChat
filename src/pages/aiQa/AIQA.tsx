@@ -5,6 +5,7 @@ import {message, Upload, Image, Typography} from 'antd';
 import {UploadOutlined, CloseCircleFilled, FileTextOutlined} from '@ant-design/icons';
 import type {UploadFile, UploadProps} from 'antd';
 const { Text } = Typography;
+import markdownit from 'markdown-it';
 import styles from './AIQA.module.scss';
 import {
     AIDenoiserProcessorLevel,
@@ -27,6 +28,16 @@ interface Message {
     imageUrls?: string[];  // 支持多张图片
     fileName?: string;
 }
+const md = markdownit({ html: true, breaks: true });
+
+const renderMarkdown: any = (content) => {
+    let result = content.trim()
+    return (
+        <Typography>
+            <div dangerouslySetInnerHTML={{ __html: md.render(result) }} />
+        </Typography>
+    );
+};
 
 const AIQA = () => {
     const navigate = useNavigate();
@@ -372,8 +383,7 @@ const AIQA = () => {
                                                                     </Image.PreviewGroup>
                                                                 </div>
                                                             )}
-
-                                                            <p className={styles.messageText}>{showLoadingBubble ? 'AI 正在生成...' : message.content}</p>
+                                                            <p className={styles.messageText}>{showLoadingBubble ? 'AI 正在生成...' : renderMarkdown(message.content)}</p>
                                                         </div>
                                                     )}
                                                 </div>
