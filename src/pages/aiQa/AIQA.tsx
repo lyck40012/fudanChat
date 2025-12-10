@@ -1,8 +1,8 @@
 import React, {useState, useRef, useEffect} from 'react';
 import {useNavigate} from 'react-router-dom';
-import {Home, Mic, Camera, Keyboard, User, Bot, Send, StopCircle, Volume1, Volume2} from 'lucide-react';
+import {Home, Mic, Camera, Keyboard, User, Bot, Send, StopCircle, Volume1, Volume2, FileUp} from 'lucide-react';
 import {message, Upload, Image, Typography, Slider} from 'antd';
-import {UploadOutlined, CloseCircleFilled, FileTextOutlined} from '@ant-design/icons';
+import {CloseCircleFilled, FileTextOutlined} from '@ant-design/icons';
 import type {UploadFile, UploadProps} from 'antd';
 const { Text } = Typography;
 import markdownit from 'markdown-it';
@@ -619,12 +619,12 @@ const AIQA = () => {
                                     <span>语音</span>
                                 </button>
 
-                                <Upload {...uploadProps}>
+                                <Upload {...uploadProps} style={{ width: '100%' }}>
                                     <button
                                         className={getToolbarButtonClasses('file')}
                                     >
                                         <div className={styles.toolbarIconWrapper}>
-                                            <UploadOutlined style={{fontSize: '24px'}}/>
+                                            <FileUp />
                                         </div>
                                         <span>上传</span>
                                     </button>

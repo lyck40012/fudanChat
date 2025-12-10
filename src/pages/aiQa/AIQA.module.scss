@@ -422,6 +422,19 @@
   align-items: center;
   gap: 16px;
   width: 100%;
+  
+  :global {
+    .ant-upload-wrapper {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        
+        .ant-upload-select {
+            width: 100%;
+            display: block;
+        }
+    }
+  }
 }
 
 .toolbarButton {
@@ -549,9 +562,9 @@
       width: 6px !important;
       border-radius: 99px;
       box-shadow: 0 0 10px rgba(168, 85, 247, 0.3);
-      left: 50% !important;
-      transform: translateX(-50%) !important;
+      transform: translateX(-50%) ;
     }
+
     .ant-slider-handle {
       width: 16px;
       height: 16px;
