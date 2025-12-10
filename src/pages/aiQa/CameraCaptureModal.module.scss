@@ -1,71 +1,170 @@
 
-.cameraPreview {
-  width: 600px;
-  height: 800px;
-  max-width: 90vw;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-  background-color: #0f172a;
-  border-radius: 24px;
-  overflow: hidden;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+.modalCustom {
+  :global(.ant-modal-container) {
+    padding: 0;
+    border-radius: 30px;
+  }
 }
 
-.cameraView {
-  flex: 1;
-  background-image: linear-gradient(to bottom right, #1e293b, #0f172a);
+.container {
+  width: 100%;
+  background-color: #0f172a; /* Slate 900 */
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.header {
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center; /* Center title */
+  position: relative;
+  background-color: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  z-index: 10;
+
+  h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: white;
+  }
+}
+
+.closeButton {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: all 0.2s;
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: white;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.cameraView {
+  width: 100%;
+  height: 400px; /* Fixed height for video area */
+  background-color: black;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
 
   .cameraStream {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain; /* Ensure full video visible */
   }
 }
 
 .cameraControls {
-  height: 15%;
+  padding: 24px;
+  background-color: #0f172a;
   display: flex;
-  align-items: center;
   justify-content: center;
-  gap: 24px;
-  background-color: rgba(0, 0, 0, 0.8);
+  align-items: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.cancelButton {
-  width: 64px;
-  height: 64px;
-  background-color: #334155;
-  border-radius: 9999px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-  color: white;
-  border: none;
-  cursor: pointer;
-
-  &:hover {
-    background-color: #475569;
-  }
+.controlInner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
 }
 
+/* Shutter Button Style */
 .captureButton {
-  width: 96px;
-  height: 96px;
-  background-color: white;
-  border-radius: 9999px;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 4px solid white; /* Outer ring */
+  background: transparent;
+  padding: 4px;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
-  border: 4px solid #334155;
-  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  .shutterInner {
+    width: 100%;
+    height: 100%;
+    background-color: white;
+    border-radius: 50%;
+    transition: all 0.2s;
+  }
 
   &:hover {
-    background-color: #e5e7eb;
+    transform: scale(1.05);
+    border-color: #e2e8f0;
+    
+    .shutterInner {
+        background-color: #f1f5f9;
+        transform: scale(0.9);
+    }
   }
+
+  &:active {
+    transform: scale(0.95);
+    .shutterInner {
+        transform: scale(0.85);
+        background-color: #3b82f6; /* Flash color */
+    }
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    border-color: #64748b;
+    
+    .shutterInner {
+        background-color: #64748b;
+    }
+  }
+  
+  &.loading {
+      animation: breathe 2s infinite;
+      border-color: #3b82f6;
+      
+      .shutterInner {
+          background-color: #3b82f6;
+      }
+  }
+}
+
+.tipText {
+    color: #94a3b8;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+@keyframes breathe {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.05); opacity: 0.7; }
+    100% { transform: scale(1); opacity: 1; }
 }

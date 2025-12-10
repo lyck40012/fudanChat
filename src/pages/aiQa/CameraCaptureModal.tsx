@@ -1,5 +1,6 @@
 import React, {useState} from 'react'
 import {message, Modal} from 'antd'
+import { X } from 'lucide-react'
 import styles from './CameraCaptureModal.module.scss'
 
 interface CameraCaptureModalProps {
@@ -47,22 +48,39 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({
             open={visible}
             onCancel={onClose}
             footer={null}
-            width={720}
+            width={600}
             centered
             maskClosable={false}
-            bodyStyle={{ padding: 0, display: 'flex', justifyContent: 'center' }}
+            className={styles.modalCustom}
+            closeIcon={null} // 隐藏默认关闭图标，使用自定义的
+            bodyStyle={{ padding: 0, backgroundColor: 'transparent' }}
         >
-            <div className={styles.cameraPreview}>
+            <div className={styles.container}>
+                {/* 顶部标题栏 */}
+                <div className={styles.header}>
+                    <h3>拍摄照片</h3>
+                    <button onClick={onClose} className={styles.closeButton} disabled={loading}>
+                        <X size={24} />
+                    </button>
+                </div>
+
+                {/* 视频预览区 */}
                 <div className={styles.cameraView}>
                     <img src={`${DEFAULT_BASE}/video_feed`} alt="摄像头画面" className={styles.cameraStream}/>
                 </div>
+
+                {/* 底部控制区 */}
                 <div className={styles.cameraControls}>
-                    <button className={styles.cancelButton} onClick={onClose} disabled={loading}>
-                        <span>取消</span>
-                    </button>
-                    <button className={styles.captureButton} onClick={handleCapture} disabled={loading}>
-                        {loading ? '拍摄中...' : '拍摄'}
-                    </button>
+                    <div className={styles.controlInner}>
+                        <button 
+                            className={`${styles.captureButton} ${loading ? styles.loading : ''}`} 
+                            onClick={handleCapture} 
+                            disabled={loading}
+                        >
+                            <div className={styles.shutterInner} />
+                        </button>
+                        <span className={styles.tipText}>{loading ? '处理中...' : '点击拍摄'}</span>
+                    </div>
                 </div>
             </div>
         </Modal>
