@@ -1,7 +1,7 @@
 import React, {useState, useRef, useEffect} from 'react';
 import {useNavigate} from 'react-router-dom';
 import {Home, Mic, Camera, Keyboard, User, Bot, Send, StopCircle} from 'lucide-react';
-import {message, Upload, Image, Typography} from 'antd';
+import {message, Upload, Image, Typography, Slider} from 'antd';
 import {UploadOutlined, CloseCircleFilled, FileTextOutlined} from '@ant-design/icons';
 import type {UploadFile, UploadProps} from 'antd';
 const { Text } = Typography;
@@ -57,6 +57,7 @@ const AIQA = () => {
     const [spokenMessageId, setSpokenMessageId] = useState<string | number | null>(null);
     const [voiceId, setVoiceId] = useState<string>('female-yufei');
     const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+    const [audioVolume, setAudioVolume] = useState<number>(80);
     const {
         messages,
         loading,
@@ -112,6 +113,13 @@ const AIQA = () => {
         setIsAudioPlaying(false)
     }, []);
 
+    // 音量变化时同步到当前音频
+    useEffect(() => {
+        if (audioRef.current) {
+            audioRef.current.volume = audioVolume / 100
+        }
+    }, [audioVolume]);
+
     const playSpeech = async (text: string) => {
         if (!voiceId) return
         if (!text?.trim()) return;
@@ -141,6 +149,7 @@ const AIQA = () => {
             const blob = new Blob([buffer], {type: 'audio/mpeg'})
             const url = URL.createObjectURL(blob)
             const audio = new Audio(url)
+            audio.volume = audioVolume / 100
             audioRef.current = audio
             audio.onended = () => {
                 setIsAudioPlaying(false)
@@ -655,6 +664,19 @@ const AIQA = () => {
                                         <p>立即打断当前语音</p>
                                     </div>
                                 </button>
+
+                                <div className={styles.volumeCard}>
+                                    <div className={styles.volumeHeader}>
+                                        <span>播报音量</span>
+                                        <span>{audioVolume}%</span>
+                                    </div>
+                                    <Slider
+                                        min={0}
+                                        max={100}
+                                        value={audioVolume}
+                                        onChange={(value) => setAudioVolume(value as number)}
+                                    />
+                                </div>
                             </div>
                             <button onClick={() => navigate('/')} className={styles.homeButton}>
                                 <Home/>
