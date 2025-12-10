@@ -34,6 +34,7 @@ const VoiceMessages: React.FC<VoiceMessagesProps> = ({ clientRef }) => {
         [],
     );
     const isFirstDeltaRef = useRef(true);
+    const messagesWrapperRef = useRef<HTMLDivElement | null>(null);
     useEffect(() => {
         if (!clientRef.current) {
             return;
@@ -128,11 +129,20 @@ const VoiceMessages: React.FC<VoiceMessagesProps> = ({ clientRef }) => {
         };
     }, [clientRef.current]);
 
+    useEffect(() => {
+        if (messagesWrapperRef.current) {
+            messagesWrapperRef.current.scrollTo({
+                top: messagesWrapperRef.current.scrollHeight,
+                behavior: 'smooth',
+            });
+        }
+    }, [messageList]);
+
     return (
-        <div className={styles.messagesWrapper}>
+        <div className={styles.messagesWrapper} ref={messagesWrapperRef}>
             {messageList.map(message => (
                 <div
-                    key={message.id}
+                    key={message.timestamp}
                     className={`${styles.messageRow} ${
                         message.type === 'user' ? styles.messageRowUser : styles.messageRowAi
                     }`}
