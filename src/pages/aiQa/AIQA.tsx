@@ -395,7 +395,7 @@ const AIQA = () => {
     };
 
     const handleSendText = async () => {
-        const content = textInput.trim();
+        const content = textInput?.trim();
         // loading 中或无输入时不触发
         if (loading || !content) return;
         const userMsg = {
@@ -598,6 +598,11 @@ const AIQA = () => {
                         </div>
 
                         <div className={styles.toolbar}>
+                            <button onClick={() => navigate('/')} className={styles.homeButton}>
+                                <Home/>
+                                <span>返回</span>
+                            </button>
+
                             <div className={styles.toolbarButtons}>
                                 <button
                                     onMouseDown={startRecording}
@@ -611,10 +616,7 @@ const AIQA = () => {
                                     <div className={getToolbarIconWrapperClasses('voice')}>
                                         <Mic/>
                                     </div>
-                                    <div className={styles.toolbarText}>
-                                        <h3>按住说话</h3>
-                                        <p>{voiceStatus === 'recording' ? '录音中...' : '按住开始录音，松开发送'}</p>
-                                    </div>
+                                    <span>语音</span>
                                 </button>
 
                                 <Upload {...uploadProps}>
@@ -622,12 +624,9 @@ const AIQA = () => {
                                         className={getToolbarButtonClasses('file')}
                                     >
                                         <div className={styles.toolbarIconWrapper}>
-                                            <UploadOutlined style={{fontSize: '28px'}}/>
+                                            <UploadOutlined style={{fontSize: '24px'}}/>
                                         </div>
-                                        <div className={styles.toolbarText}>
-                                            <h3>上传文件</h3>
-                                            <p>支持PDF、图片等文件</p>
-                                        </div>
+                                        <span>上传</span>
                                     </button>
                                 </Upload>
 
@@ -635,20 +634,14 @@ const AIQA = () => {
                                     <div className={styles.toolbarIconWrapper}>
                                         <Camera/>
                                     </div>
-                                    <div className={styles.toolbarText}>
-                                        <h3>拍摄</h3>
-                                        <p>拍照上传报告</p>
-                                    </div>
+                                    <span>拍摄</span>
                                 </button>
 
                                 <button onClick={() => switchMode('text')} className={getToolbarButtonClasses('text')}>
                                     <div className={styles.toolbarIconWrapper}>
                                         <Keyboard/>
                                     </div>
-                                    <div className={styles.toolbarText}>
-                                        <h3>打字</h3>
-                                        <p>使用键盘输入问题</p>
-                                    </div>
+                                    <span>输入</span>
                                 </button>
 
                                 <button
@@ -659,29 +652,20 @@ const AIQA = () => {
                                     <div className={styles.toolbarIconWrapper}>
                                         <StopCircle/>
                                     </div>
-                                    <div className={styles.toolbarText}>
-                                        <h3>停止播报</h3>
-                                        <p>立即打断当前语音</p>
-                                    </div>
+                                    <span>停止</span>
                                 </button>
-
-                                <div className={styles.volumeCard}>
-                                    <div className={styles.volumeHeader}>
-                                        <span>播报音量</span>
-                                        <span>{audioVolume}%</span>
-                                    </div>
-                                    <Slider
-                                        min={0}
-                                        max={100}
-                                        value={audioVolume}
-                                        onChange={(value) => setAudioVolume(value as number)}
-                                    />
-                                </div>
                             </div>
-                            <button onClick={() => navigate('/')} className={styles.homeButton}>
-                                <Home/>
-                                <span>返回</span>
-                            </button>
+
+                            <div className={styles.volumeCard}>
+                                <Slider
+                                    vertical
+                                    min={0}
+                                    max={100}
+                                    value={audioVolume}
+                                    onChange={(value) => setAudioVolume(value as number)}
+                                    tooltip={{ formatter: (value) => `${value}%` }}
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>

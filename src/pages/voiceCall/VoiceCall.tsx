@@ -1,6 +1,6 @@
 import {useState, useEffect, useRef, ReactNode} from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Volume2, VolumeX, Mic, MicOff, Home } from 'lucide-react';
+import { Mic, MicOff, Home, Phone, PhoneOff, CircleStop, Volume2, Volume1 } from 'lucide-react';
 import styles from './VoiceCall.module.scss';
 import VoiceMessages from './component/VoiceMessages';
 
@@ -54,7 +54,7 @@ const VoiceCall = () => {
     if (callStatus === 'active') {
       const timer = setInterval(() => {
         setCallDuration((prev) => prev + 1);
-      }, 2000);
+      }, 1000);
       return () => clearInterval(timer);
     }
   }, [callStatus]);
@@ -306,82 +306,73 @@ const VoiceCall = () => {
                 <div className={styles.overlayPanelEnd}>
                   <p className={styles.overlayTitle}>通话已结束</p>
                   <p className={styles.overlayDesc}>通话时长: {formatDuration(callDuration)}</p>
-                  <p className={styles.overlaySubDesc}>即将返回首页...</p>
                 </div>
               </div>
             )}
           </div>
 
           <div className={styles.rightPane}>
-            <Button
-              type="primary"
-              onClick={isConnected ? handleHangup : handleStartCozeCall}
-              loading={!isConnected && isConnecting}
-            >
-              {isConnected
-                ? '挂断'
-                : callStatus === 'ended'
-                  ? '重新开始对话'
-                  : '开始对话'}
-            </Button>
-            <Button
-              type="primary"
-              onClick={handleInterruptCall}
-              disabled={!isConnected || callStatus !== 'active'}
-            >
-              打断对话
-            </Button>
+              <button onClick={() => navigate('/')} className={styles.homeButton}>
+                  <Home/>
+                  <span>返回</span>
+              </button>
 
-            {/* 音量控制 */}
-            <div className={styles.volumeControl}>
-              <Volume2 className={styles.volumeIconMax} />
-              <Slider
-                vertical
-                min={0}
-                max={100}
-                value={volume}
-                onChange={(value) => {
-                  setVolume(value);
-                  if (clientRef.current && isConnected) {
-                    clientRef.current.setPlaybackVolume(value / 100);
-                  }
-                }}
-                disabled={callStatus !== 'active'}
-                tooltip={{ formatter: (value) => `${value}%` }}
-                style={{ height: '120px' }}
-              />
-              <VolumeX className={styles.volumeIconMute} />
-            </div>
+              <div className={styles.toolbarButtons}>
+                  <button
+                      onClick={isConnected ? handleHangup : handleStartCozeCall}
+                      className={`${styles.toolbarButton} ${isConnected ? styles.hangup : styles.call}`}
+                      disabled={!isConnected && isConnecting}
+                  >
+                      <div className={styles.toolbarIconWrapper}>
+                          {isConnected ? <PhoneOff /> : <Phone />}
+                      </div>
+                      <span>{isConnected ? '挂断' : '通话'}</span>
+                  </button>
 
-            {/* 静音按钮 */}
-            <button
-              onClick={toggleMute}
-              disabled={callStatus !== 'active'}
-              className={styles.muteButton}
-            >
-              <div
-                className={`${styles.muteCircle} ${
-                    !audioEnabled ? styles.muteCircleActive : styles.muteCircleInactive
-                }`}
-              >
-                {!audioEnabled ? (
-                  <MicOff className="w-10 h-10 text-red-400" />
-                ) : (
-                  <Mic className="w-10 h-10 text-white" />
-                )}
+                  <button
+                      onClick={handleInterruptCall}
+                      className={`${styles.toolbarButton} ${styles.secondary}`}
+                      disabled={!isConnected || callStatus !== 'active'}
+                  >
+                      <div className={styles.toolbarIconWrapper}>
+                          <CircleStop />
+                      </div>
+                      <span>打断</span>
+                  </button>
+
+                  <button
+                      onClick={toggleMute}
+                      className={`${styles.toolbarButton} ${styles.secondary} ${!audioEnabled ? styles.active : ''}`}
+                      disabled={callStatus !== 'active'}
+                  >
+                      <div className={styles.toolbarIconWrapper}>
+                          {!audioEnabled ? <MicOff /> : <Mic />}
+                      </div>
+                      <span>{!audioEnabled ? '已静音' : '静音'}</span>
+                  </button>
               </div>
-              <span className={!audioEnabled ? styles.muteLabelActive : styles.muteLabel}>
-                {!audioEnabled ? '已静音' : '麦克风'}
-              </span>
-            </button>
 
-            {/* 返回按钮 */}
-            <button onClick={() => navigate('/')} className={styles.backButton}>
-              <div className={styles.backCircle}>
-                <Home className="w-8 h-8 text-white" />
+              {/* 音量控制 */}
+              <div className={styles.volumeCard}>
+                  <Volume2 className={styles.volumeIconHigh} size={16} />
+                  <div className={styles.sliderWrapper}>
+                      <Slider
+                          vertical
+                          min={0}
+                          max={100}
+                          value={volume}
+                          onChange={(value) => {
+                              setVolume(value);
+                              if (clientRef.current && isConnected) {
+                                  clientRef.current.setPlaybackVolume(value / 100);
+                              }
+                          }}
+                          disabled={callStatus !== 'active'}
+                          tooltip={{ formatter: (value) => `${value}%`, placement: 'left' }}
+                      />
+                  </div>
+                  <Volume1 className={styles.volumeIconLow} size={16} />
               </div>
-              <span className={styles.backLabel}>返回</span>
-            </button>
           </div>
         </div>
       </div>
