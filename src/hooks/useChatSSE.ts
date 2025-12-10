@@ -8,7 +8,8 @@ export function useChatSSE({url, headers = {}}) {
     }])
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
-
+   const isConversationRef = useRef<boolean>(false)
+    const  conversationIdRef = useRef<number>('')
     const controllerRef = useRef<AbortController | null>(null)
     const assistantIdRef = useRef<string | null>(null)
     const chatIdRef = useRef<string | null>(null)
@@ -48,20 +49,25 @@ export function useChatSSE({url, headers = {}}) {
             }]
 
             userMessage.imageUrls.forEach(x => {
-                arr.push({
+                let obj = {
                     type: x.type.includes('image') ? "image" : 'file',
-                    file_id: x.response.data.id
-                })
+                }
+                if (x?.isShoot) {
+                    obj['file_url'] = x.url
+                } else {
+                    obj['file_id'] = x.response.data.id
+                }
+                arr.push(obj)
             })
             requestMessageArr.push({
-                role:userMessage.role,
-                content_type:'object_string',
-                content:JSON.stringify(arr)
+                role: userMessage.role,
+                content_type: 'object_string',
+                content: JSON.stringify(arr)
             })
         } else {
             requestMessageArr.push(userMessage)
         }
-        console.log("requestMessageArr====>",requestMessageArr)
+        console.log("requestMessageArr====>", requestMessageArr)
         try {
             const response = await fetch(url, {
                 method: 'POST',
@@ -119,7 +125,10 @@ export function useChatSSE({url, headers = {}}) {
                     }
 
                     const data = JSON.parse(dataRaw)
-
+        if(!isConversationRef.current){
+            conversationIdRef.current = data.conversation_id
+            isConversationRef.current = true
+        }
                     switch (event) {
                         case 'conversation.chat.created':
                             chatIdRef.current = data.id

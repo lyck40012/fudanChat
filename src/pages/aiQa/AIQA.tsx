@@ -28,8 +28,6 @@ interface Message {
     fileName?: string;
 }
 
-const PHOTO_API_BASE = 'http://127.0.0.1:5000';
-
 const AIQA = () => {
     const navigate = useNavigate();
     const [currentMode, setCurrentMode] = useState<InputMode>('text');
@@ -107,14 +105,14 @@ const AIQA = () => {
         }
         // 监听转录结果更新
         client.on(WebsocketsEventType.TRANSCRIPTIONS_MESSAGE_UPDATE,(event: any) => {
-            const userMsg: Message = {
-                logid: event.detail.logid,
-                id:event.id,
-                role: 'user',
-                content: event.data.content,
-                content_type:'text'
-            };
-            setRecognizeResult(userMsg)
+                const userMsg: Message = {
+                    logid: event.detail.logid,
+                    id:event.id,
+                    role: 'user',
+                    content: event.data.content,
+                    content_type:'text'
+                };
+                setRecognizeResult(userMsg)
             },
         );
 
@@ -182,11 +180,19 @@ const AIQA = () => {
     };
 
     const handleCapturedImage = (url: string) => {
+        console.log("Captured image URL:", url);
+        setFileList([...fileList, {
+            uid: Date.now().toString(),
+            url,
+            isShoot: true,
+            type: 'image/jpeg',
+        }])
         setCurrentMode('text');
     };
 
     const handleFileUpload: UploadProps['onChange'] = (info) => {
         let newFileList = [...info.fileList];
+        console.log("info.fileList===>",newFileList)
         setFileList(newFileList);
         if (info.file.status === 'uploading') {
             console.log('文件上传中:', info.file.name);
@@ -213,7 +219,7 @@ const AIQA = () => {
 
     // 获取文件预览URL
     const getFilePreviewUrl = (file: UploadFile) => {
-        console.log("file===>",file)
+
         if (file.originFileObj) {
             return URL.createObjectURL(file.originFileObj);
         }
@@ -310,131 +316,131 @@ const AIQA = () => {
 
     return (
         <>
-        <div className={styles.container}>
-            <div className={styles.contentWrapper}>
-                <div className={styles.topNav}>
-                    <h1>AI问答</h1>
-                </div>
+            <div className={styles.container}>
+                <div className={styles.contentWrapper}>
+                    <div className={styles.topNav}>
+                        <h1>AI问答</h1>
+                    </div>
 
-                <div className={styles.mainContent}>
-                    <div className={styles.chatArea}>
-                        <div className={styles.modeInfo}>
-                            <p>
-                                {currentMode === 'voice' && '当前模式：语音优先'}
-                                {currentMode === 'text' && '当前模式：文字输入'}
-                                {currentMode === 'file' && '本轮对话基于您上传的文件'}
-                                {currentMode === 'camera' && '图片识别模式'}
-                            </p>
-                        </div>
+                    <div className={styles.mainContent}>
+                        <div className={styles.chatArea}>
+                            <div className={styles.modeInfo}>
+                                <p>
+                                    {currentMode === 'voice' && '当前模式：语音优先'}
+                                    {currentMode === 'text' && '当前模式：文字输入'}
+                                    {currentMode === 'file' && '本轮对话基于您上传的文件'}
+                                    {currentMode === 'camera' && '图片识别模式'}
+                                </p>
+                            </div>
 
-                        <div className={styles.messageList}>
-                            <div className={styles.messageListInner}>
-                                {messages.map((message, index) => {
-                                    console.log('message=======>',message)
-                                    const isLast = index === messages.length - 1;
-                                    const hasContent = !!message.content?.trim();
-                                    const showLoadingBubble = loading && isLast && message.role === 'ai' && !hasContent;
-                                    return (
-                                    <div key={message.id} className={`${styles.messageRow} ${styles[message.role]} ${showLoadingBubble ? styles.loadingMessage : ''}`}>
-                                        {message.role !== 'system' && (
-                                            <div className={`${styles.avatar} ${styles[message.role]}`}>
-                                                {message.role === 'user' ? <User/> : <Bot/>}
+                            <div className={styles.messageList}>
+                                <div className={styles.messageListInner}>
+                                    {messages.map((message, index) => {
+                                        console.log('message=======>',message)
+                                        const isLast = index === messages.length - 1;
+                                        const hasContent = !!message.content?.trim();
+                                        const showLoadingBubble = loading && isLast && message.role === 'ai' && !hasContent;
+                                        return (
+                                            <div key={message.id} className={`${styles.messageRow} ${styles[message.role]} ${showLoadingBubble ? styles.loadingMessage : ''}`}>
+                                                {message.role !== 'system' && (
+                                                    <div className={`${styles.avatar} ${styles[message.role]}`}>
+                                                        {message.role === 'user' ? <User/> : <Bot/>}
+                                                    </div>
+                                                )}
+                                                <div className={`${styles.messageContentWrapper} ${styles[message.role]}`}>
+                                                    {message.role === 'system' ? (
+                                                        <div className={`${styles.messageBubble} ${styles.system}`}>
+                                                            <p>📄 {message.content}</p>
+                                                        </div>
+                                                    ) : (
+                                                        <div className={`${styles.messageBubble} ${styles[message.role]} ${showLoadingBubble ? styles.loadingBubble : ''}`}>
+                                                            {showLoadingBubble && <div className={styles.bubbleSpinner}></div>}
+                                                            {message.imageUrls && message.imageUrls.length > 0 && (
+                                                                <div className={styles.messageImagesGrid}>
+                                                                    <Image.PreviewGroup>
+                                                                        {message.imageUrls.map((url, idx) => (
+                                                                            <Image
+                                                                                key={idx}
+                                                                                src={getFilePreviewUrl(url)}
+                                                                                alt={`图片 ${idx + 1}`}
+                                                                                className={styles.messageImage}
+                                                                                preview={{
+                                                                                    mask: '预览'
+                                                                                }}
+                                                                            />
+                                                                        ))}
+                                                                    </Image.PreviewGroup>
+                                                                </div>
+                                                            )}
+
+                                                            <p className={styles.messageText}>{showLoadingBubble ? 'AI 正在生成...' : message.content}</p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )})}
+                                </div>
+                            </div>
+
+                            <div className={styles.statusBar}>
+                                {voiceStatus === 'recording' && (
+                                    <div className={`${styles.statusIndicator} ${styles.recordingIndicator}`}>
+                                        <div className={styles.dot}></div>
+                                        <span>🎙 正在录音...</span>
+                                    </div>
+                                )}
+                                {voiceStatus === 'processing' && (
+                                    <div className={`${styles.statusIndicator} ${styles.processingIndicator}`}>
+                                        <div className={styles.dots}>
+                                            <div className={styles.dot}></div>
+                                            <div className={styles.dot}></div>
+                                            <div className={styles.dot}></div>
+                                        </div>
+                                        <span>⌛ 正在识别语音...</span>
+                                    </div>
+                                )}
+                                {currentMode === 'text' && voiceStatus === 'idle' && (
+                                    <div className={styles.textInputWrapper}>
+                                        {/* 文件列表显示区域 */}
+                                        {fileList.length > 0 && (
+                                            <div className={styles.fileListContainer}>
+                                                {fileList.map((file) => (
+                                                    <div key={file.uid} className={styles.fileItem}>
+                                                        {isImageFile(file) ? (
+                                                            <Image
+                                                                width={32}
+                                                                height={32}
+                                                                src={getFilePreviewUrl(file)}
+                                                                alt={file.name}
+                                                                style={{ borderRadius: '6px', objectFit: 'cover' }}
+                                                                preview={{
+                                                                    mask: '预览'
+                                                                }}
+                                                            />
+                                                        ) : (
+                                                            <div className={styles.filePreview}>
+                                                                <FileTextOutlined className={styles.fileIcon} />
+                                                            </div>
+                                                        )}
+                                                        <div className={styles.fileInfo}>
+                                                            <Text className={styles.fileName} ellipsis={{ tooltip: file.name }}>
+                                                                {file.name}
+                                                            </Text>
+                                                            <Text className={styles.fileSize}>
+                                                                {file.size ? `${(file.size / 1024).toFixed(1)} KB` : ''}
+                                                            </Text>
+                                                        </div>
+                                                        <CloseCircleFilled
+                                                            className={styles.removeFileButton}
+                                                            onClick={() => handleRemoveFile(file)}
+                                                        />
+                                                    </div>
+                                                ))}
                                             </div>
                                         )}
-                                        <div className={`${styles.messageContentWrapper} ${styles[message.role]}`}>
-                                            {message.role === 'system' ? (
-                                                <div className={`${styles.messageBubble} ${styles.system}`}>
-                                                    <p>📄 {message.content}</p>
-                                                </div>
-                                            ) : (
-                                                <div className={`${styles.messageBubble} ${styles[message.role]} ${showLoadingBubble ? styles.loadingBubble : ''}`}>
-                                                    {showLoadingBubble && <div className={styles.bubbleSpinner}></div>}
-                                                    {message.imageUrls && message.imageUrls.length > 0 && (
-                                                        <div className={styles.messageImagesGrid}>
-                                                            <Image.PreviewGroup>
-                                                                {message.imageUrls.map((url, idx) => (
-                                                                    <Image
-                                                                        key={idx}
-                                                                        src={getFilePreviewUrl(url)}
-                                                                        alt={`图片 ${idx + 1}`}
-                                                                        className={styles.messageImage}
-                                                                        preview={{
-                                                                            mask: '预览'
-                                                                        }}
-                                                                    />
-                                                                ))}
-                                                            </Image.PreviewGroup>
-                                                        </div>
-                                                    )}
 
-                                                    <p className={styles.messageText}>{showLoadingBubble ? 'AI 正在生成...' : message.content}</p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                )})}
-                            </div>
-                        </div>
-
-                        <div className={styles.statusBar}>
-                            {voiceStatus === 'recording' && (
-                                <div className={`${styles.statusIndicator} ${styles.recordingIndicator}`}>
-                                    <div className={styles.dot}></div>
-                                    <span>🎙 正在录音...</span>
-                                </div>
-                            )}
-                            {voiceStatus === 'processing' && (
-                                <div className={`${styles.statusIndicator} ${styles.processingIndicator}`}>
-                                    <div className={styles.dots}>
-                                        <div className={styles.dot}></div>
-                                        <div className={styles.dot}></div>
-                                        <div className={styles.dot}></div>
-                                    </div>
-                                    <span>⌛ 正在识别语音...</span>
-                                </div>
-                            )}
-                            {currentMode === 'text' && voiceStatus === 'idle' && (
-                                <div className={styles.textInputWrapper}>
-                                    {/* 文件列表显示区域 */}
-                                    {fileList.length > 0 && (
-                                        <div className={styles.fileListContainer}>
-                                            {fileList.map((file) => (
-                                                <div key={file.uid} className={styles.fileItem}>
-                                                    {isImageFile(file) ? (
-                                                        <Image
-                                                            width={32}
-                                                            height={32}
-                                                            src={getFilePreviewUrl(file)}
-                                                            alt={file.name}
-                                                            style={{ borderRadius: '6px', objectFit: 'cover' }}
-                                                            preview={{
-                                                                mask: '预览'
-                                                            }}
-                                                        />
-                                                    ) : (
-                                                        <div className={styles.filePreview}>
-                                                            <FileTextOutlined className={styles.fileIcon} />
-                                                        </div>
-                                                    )}
-                                                    <div className={styles.fileInfo}>
-                                                        <Text className={styles.fileName} ellipsis={{ tooltip: file.name }}>
-                                                            {file.name}
-                                                        </Text>
-                                                        <Text className={styles.fileSize}>
-                                                            {file.size ? `${(file.size / 1024).toFixed(1)} KB` : ''}
-                                                        </Text>
-                                                    </div>
-                                                    <CloseCircleFilled
-                                                        className={styles.removeFileButton}
-                                                        onClick={() => handleRemoveFile(file)}
-                                                    />
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-
-                                    {/* 输入框区域 */}
-                                    <div className={styles.textInputContainer}>
+                                        {/* 输入框区域 */}
+                                        <div className={styles.textInputContainer}>
                                         <textarea
                                             value={textInput}
                                             onChange={(e) => setTextInput(e.target.value)}
@@ -444,92 +450,91 @@ const AIQA = () => {
                                             disabled={loading}
                                             rows={2}
                                         />
-                                        <button onClick={handleSendText} className={styles.sendButton} disabled={loading}>
-                                            <Send/>
-                                        </button>
+                                            <button onClick={handleSendText} className={styles.sendButton} disabled={loading}>
+                                                <Send/>
+                                            </button>
+                                        </div>
                                     </div>
-                                </div>
-                            )}
-                            {voiceStatus === 'idle' && currentMode !== 'text' && (
-                                <div className={styles.idleText}>
-                                    <p>
-                                        {currentMode === 'voice' && '长按右侧"按住说话"开始语音提问'}
-                                        {currentMode === 'file' && '文件已就绪，可以开始提问'}
-                                        {currentMode === 'camera' && '准备拍照或继续提问'}
-                                    </p>
-                                </div>
-                            )}
+                                )}
+                                {voiceStatus === 'idle' && currentMode !== 'text' && (
+                                    <div className={styles.idleText}>
+                                        <p>
+                                            {currentMode === 'voice' && '长按右侧"按住说话"开始语音提问'}
+                                            {currentMode === 'file' && '文件已就绪，可以开始提问'}
+                                            {currentMode === 'camera' && '准备拍照或继续提问'}
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
                         </div>
-                    </div>
 
-                    <div className={styles.toolbar}>
-                        <div className={styles.toolbarButtons}>
-                            <button
-                                onMouseDown={startRecording}
-                                onMouseUp={stopRecording}
-                                onMouseLeave={() => voiceStatus === 'recording' && stopRecording()}
-                                onTouchStart={startRecording}
-                                onTouchEnd={stopRecording}
-                                onClick={() => switchMode('voice')}
-                                className={getToolbarButtonClasses('voice')}
-                            >
-                                <div className={getToolbarIconWrapperClasses('voice')}>
-                                    <Mic/>
-                                </div>
-                                <div className={styles.toolbarText}>
-                                    <h3>按住说话</h3>
-                                    <p>{voiceStatus === 'recording' ? '录音中...' : '按住开始录音，松开发送'}</p>
-                                </div>
-                            </button>
-
-                            <Upload {...uploadProps}>
+                        <div className={styles.toolbar}>
+                            <div className={styles.toolbarButtons}>
                                 <button
-                                    className={getToolbarButtonClasses('file')}
+                                    onMouseDown={startRecording}
+                                    onMouseUp={stopRecording}
+                                    onMouseLeave={() => voiceStatus === 'recording' && stopRecording()}
+                                    onTouchStart={startRecording}
+                                    onTouchEnd={stopRecording}
+                                    onClick={() => switchMode('voice')}
+                                    className={getToolbarButtonClasses('voice')}
                                 >
-                                    <div className={styles.toolbarIconWrapper}>
-                                        <UploadOutlined style={{fontSize: '28px'}}/>
+                                    <div className={getToolbarIconWrapperClasses('voice')}>
+                                        <Mic/>
                                     </div>
                                     <div className={styles.toolbarText}>
-                                        <h3>上传文件</h3>
-                                        <p>支持PDF、图片等文件</p>
+                                        <h3>按住说话</h3>
+                                        <p>{voiceStatus === 'recording' ? '录音中...' : '按住开始录音，松开发送'}</p>
                                     </div>
                                 </button>
-                            </Upload>
 
-                            <button onClick={openCamera} className={getToolbarButtonClasses('camera')}>
-                                <div className={styles.toolbarIconWrapper}>
-                                    <Camera/>
-                                </div>
-                                <div className={styles.toolbarText}>
-                                    <h3>拍摄</h3>
-                                    <p>拍照上传报告</p>
-                                </div>
-                            </button>
+                                <Upload {...uploadProps}>
+                                    <button
+                                        className={getToolbarButtonClasses('file')}
+                                    >
+                                        <div className={styles.toolbarIconWrapper}>
+                                            <UploadOutlined style={{fontSize: '28px'}}/>
+                                        </div>
+                                        <div className={styles.toolbarText}>
+                                            <h3>上传文件</h3>
+                                            <p>支持PDF、图片等文件</p>
+                                        </div>
+                                    </button>
+                                </Upload>
 
-                            <button onClick={() => switchMode('text')} className={getToolbarButtonClasses('text')}>
-                                <div className={styles.toolbarIconWrapper}>
-                                    <Keyboard/>
-                                </div>
-                                <div className={styles.toolbarText}>
-                                    <h3>打字</h3>
-                                    <p>使用键盘输入问题</p>
-                                </div>
+                                <button onClick={openCamera} className={getToolbarButtonClasses('camera')}>
+                                    <div className={styles.toolbarIconWrapper}>
+                                        <Camera/>
+                                    </div>
+                                    <div className={styles.toolbarText}>
+                                        <h3>拍摄</h3>
+                                        <p>拍照上传报告</p>
+                                    </div>
+                                </button>
+
+                                <button onClick={() => switchMode('text')} className={getToolbarButtonClasses('text')}>
+                                    <div className={styles.toolbarIconWrapper}>
+                                        <Keyboard/>
+                                    </div>
+                                    <div className={styles.toolbarText}>
+                                        <h3>打字</h3>
+                                        <p>使用键盘输入问题</p>
+                                    </div>
+                                </button>
+                            </div>
+                            <button onClick={() => navigate('/')} className={styles.homeButton}>
+                                <Home/>
+                                <span>返回</span>
                             </button>
                         </div>
-                        <button onClick={() => navigate('/')} className={styles.homeButton}>
-                            <Home/>
-                            <span>返回</span>
-                        </button>
                     </div>
                 </div>
             </div>
-        </div>
-        <CameraCaptureModal
-            visible={cameraModalVisible}
-            onClose={closeCamera}
-            onCaptured={handleCapturedImage}
-            baseUrl={PHOTO_API_BASE}
-        />
+            <CameraCaptureModal
+                visible={cameraModalVisible}
+                onClose={closeCamera}
+                onCaptured={handleCapturedImage}
+            />
         </>
     );
 };

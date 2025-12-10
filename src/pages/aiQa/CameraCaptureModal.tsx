@@ -15,7 +15,6 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({
     visible,
     onClose,
     onCaptured,
-    baseUrl = DEFAULT_BASE
 }) => {
     const [loading, setLoading] = useState(false)
 
@@ -24,11 +23,11 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({
     const handleCapture = async () => {
         setLoading(true)
         try {
-            const res = await fetch(`${baseUrl}/api/capture`, { method: 'POST' })
+            const res = await fetch(`${DEFAULT_BASE}/api/capture`, { method: 'POST' })
             if (!res.ok) throw new Error('请求失败')
             const json = await res.json()
             if (json.code === 0 && json.data?.url) {
-                const fullUrl = `${baseUrl}${json.data.url}`
+                const fullUrl = `${DEFAULT_BASE}${json.data.url}`
                 onCaptured(fullUrl)
                 message.success('拍摄成功，已加入输入框')
                 onClose()
@@ -55,7 +54,7 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({
         >
             <div className={styles.cameraPreview}>
                 <div className={styles.cameraView}>
-                    <img src={`${baseUrl}/video_feed`} alt="摄像头画面" className={styles.cameraStream}/>
+                    <img src={`${DEFAULT_BASE}/video_feed`} alt="摄像头画面" className={styles.cameraStream}/>
                 </div>
                 <div className={styles.cameraControls}>
                     <button className={styles.cancelButton} onClick={onClose} disabled={loading}>
