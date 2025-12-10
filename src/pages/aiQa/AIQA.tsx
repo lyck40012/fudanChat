@@ -1,6 +1,6 @@
 import React, {useState, useRef, useEffect} from 'react';
 import {useNavigate} from 'react-router-dom';
-import {Home, Mic, Camera, Keyboard, User, Bot, Send, StopCircle} from 'lucide-react';
+import {Home, Mic, Camera, Keyboard, User, Bot, Send, StopCircle, Volume1, Volume2} from 'lucide-react';
 import {message, Upload, Image, Typography, Slider} from 'antd';
 import {UploadOutlined, CloseCircleFilled, FileTextOutlined} from '@ant-design/icons';
 import type {UploadFile, UploadProps} from 'antd';
@@ -657,14 +657,18 @@ const AIQA = () => {
                             </div>
 
                             <div className={styles.volumeCard}>
-                                <Slider
-                                    vertical
-                                    min={0}
-                                    max={100}
-                                    value={audioVolume}
-                                    onChange={(value) => setAudioVolume(value as number)}
-                                    tooltip={{ formatter: (value) => `${value}%` }}
-                                />
+                                <Volume2 className={styles.volumeIconHigh} size={16} />
+                                <div className={styles.sliderWrapper}>
+                                    <Slider
+                                        vertical
+                                        min={0}
+                                        max={100}
+                                        value={audioVolume}
+                                        onChange={(value) => setAudioVolume(value as number)}
+                                        tooltip={{ formatter: (value) => `${value}%`, placement: 'left' }}
+                                    />
+                                </div>
+                                <Volume1 className={styles.volumeIconLow} size={16} />
                             </div>
                         </div>
                     </div>

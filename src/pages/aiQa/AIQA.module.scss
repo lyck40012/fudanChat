@@ -498,25 +498,76 @@
   }
 }
 
+/* Volume Control (Updated to match VoiceCall but with Purple theme) */
 .volumeCard {
   width: 100%;
-  padding: 12px 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  height: 120px; /* Fixed height for vertical slider area */
+  gap: 12px;
+  padding-bottom: 24px;
+  
+  .volumeIconHigh, .volumeIconLow {
+      color: rgba(255,255,255,0.4);
+      transition: color 0.3s;
+  }
+  
+  &:hover {
+      .volumeIconHigh, .volumeIconLow {
+          color: rgba(255,255,255,0.8);
+      }
+  }
+
+  .sliderWrapper {
+      height: 120px;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+  }
   
   :global {
     .ant-slider-vertical {
-      height: 100%;
       margin: 0;
+      padding: 0 16px;
+      
+      &:hover .ant-slider-rail {
+          background-color: rgba(255, 255, 255, 0.15);
+      }
     }
-    .ant-slider-track {
-      background-color: #a855f7;
-    }
+
     .ant-slider-rail {
-        background-color: rgba(255,255,255,0.2);
+      background-color: rgba(255, 255, 255, 0.1);
+      width: 6px !important;
+      border-radius: 99px;
+      transition: background-color 0.3s;
+      left: 50% !important;
+      transform: translateX(-50%) !important;
     }
+
+    .ant-slider-track {
+      background: linear-gradient(to top, #a855f7, #d8b4fe); /* Purple gradient */
+      width: 6px !important;
+      border-radius: 99px;
+      box-shadow: 0 0 10px rgba(168, 85, 247, 0.3);
+      left: 50% !important;
+      transform: translateX(-50%) !important;
+    }
+    .ant-slider-handle {
+      width: 16px;
+      height: 16px;
+      margin-left: 8px;
+      background-color: #ffffff;
+      border: none;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+
+      opacity: 1;
+      border-radius: 50%;
+      &::after {
+        display: none;
+      }
+    }
+    
+    .ant-slider-step { display: none; }
   }
 }
 
