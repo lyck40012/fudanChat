@@ -51,6 +51,7 @@ const AIQA = () => {
     const clientRef = useRef<WsTranscriptionClient>();
     const messageListRef = useRef<HTMLDivElement | null>(null);
     const audioRef = useRef<HTMLAudioElement | null>(null);
+    const speechAbortRef = useRef<AbortController | null>(null);
     const initialQuestionRef = useRef<string | null>(null);
     const [spokenMessageId, setSpokenMessageId] = useState<string | number | null>(null);
     const [voiceId, setVoiceId] = useState<string>('');
@@ -102,12 +103,14 @@ const AIQA = () => {
         fetchVoices()
     }, [])
 
-    // 组件卸载时清理语音相关资源，确保离开页面即停止播放/录制
+    // 组件卸载时彻底清理语音链路，防止残留播放/录制/请求
     useEffect(() => () => {
         if (audioRef.current) {
+            const src = audioRef.current.src;
             audioRef.current.pause();
             audioRef.current.currentTime = 0;
             audioRef.current = null;
+            if (src?.startsWith('blob:')) URL.revokeObjectURL(src);
         }
         if (clientRef.current) {
             try {
@@ -115,7 +118,15 @@ const AIQA = () => {
             } catch (err) {
                 console.error('停止语音客户端失败', err);
             }
+            clientRef.current = undefined;
         }
+        if (speechAbortRef.current) {
+            speechAbortRef.current.abort();
+            speechAbortRef.current = null;
+        }
+        pressStartTimeRef.current = null;
+        setVoiceStatus('idle');
+        setRecognizeResult({} as Message);
         stop?.();
         setIsAudioPlaying(false);
     }, []);
@@ -131,6 +142,13 @@ const AIQA = () => {
         if (!voiceId) return
         if (!text?.trim()) return;
         try {
+            // 若已有语音请求在飞行，则先中止
+            if (speechAbortRef.current) {
+                speechAbortRef.current.abort();
+            }
+            const controller = new AbortController();
+            speechAbortRef.current = controller;
+
             // 先停止上一段音频
             if (audioRef.current) {
                 audioRef.current.pause();
@@ -143,6 +161,7 @@ const AIQA = () => {
                     'Content-Type': 'application/json',
                     Authorization: 'Bearer pat_hD3fk5ygNuFPLz5ndwIKYWmwY8qgET9DrruIA3Ean8cCEPfSi6o40EZmMg03TS5P'
                 },
+                signal: controller.signal,
                 body: JSON.stringify({
                     voice_id: voiceId || '',
                     response_format: 'wav',
@@ -169,9 +188,12 @@ const AIQA = () => {
             await audio.play()
             setIsAudioPlaying(true)
         } catch (err) {
+            if ((err as any)?.name === 'AbortError') return;
             console.error('语音播放失败', err)
             message.error('语音播放失败')
             setIsAudioPlaying(false)
+        } finally {
+            speechAbortRef.current = null;
         }
     }
 
@@ -529,7 +551,7 @@ const AIQA = () => {
                                                                         </Image.PreviewGroup>
                                                                     </div>
                                                                 )}
-                                                                <p className={styles.messageText}>{showLoadingBubble ? '正在计算...' : renderMarkdown(message.content)}</p>
+                                                                <p className={styles.messageText}>{showLoadingBubble ? 'AI识别中...' : renderMarkdown(message.content)}</p>
                                                             </div>
                                                         )}
                                                     </div>
