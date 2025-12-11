@@ -1,170 +1,139 @@
-
 .modalCustom {
-  :global(.ant-modal-container) {
-    padding: 0;
-    border-radius: 30px;
+  :global {
+    .ant-modal-content {
+      background: transparent;
+      box-shadow: none;
+      padding: 0;
+    }
   }
 }
 
 .container {
-  width: 100%;
-  background-color: #0f172a; /* Slate 900 */
+  background: #ffffff;
   border-radius: 24px;
   overflow: hidden;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 20px 60px rgba(0, 50, 100, 0.15);
   display: flex;
   flex-direction: column;
   position: relative;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid #e2e8f0;
 }
 
 .header {
   padding: 16px 24px;
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  justify-content: center; /* Center title */
-  position: relative;
-  background-color: rgba(15, 23, 42, 0.8);
-  backdrop-filter: blur(8px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  background: #ffffff;
+  border-bottom: 1px solid #f1f5f9;
   z-index: 10;
 
   h3 {
     margin: 0;
     font-size: 18px;
     font-weight: 600;
-    color: white;
+    color: #1e293b;
   }
 }
 
 .closeButton {
-  position: absolute;
-  right: 16px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: transparent;
+  background: #f1f5f9;
   border: none;
-  color: #94a3b8;
-  cursor: pointer;
-  padding: 8px;
   border-radius: 50%;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
+  color: #64748b;
   transition: all 0.2s;
 
   &:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-    color: white;
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+    background: #e2e8f0;
+    color: #334155;
   }
 }
 
 .cameraView {
   width: 100%;
-  height: 400px; /* Fixed height for video area */
-  background-color: black;
-  position: relative;
+  height: 400px;
+  background: #f8fafc;
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
   overflow: hidden;
+}
 
-  .cameraStream {
-    width: 100%;
-    height: 100%;
-    object-fit: contain; /* Ensure full video visible */
-  }
+.cameraStream {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .cameraControls {
   padding: 24px;
-  background-color: #0f172a;
+  background: #ffffff;
+  border-top: 1px solid #f1f5f9;
   display: flex;
   justify-content: center;
-  align-items: center;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .controlInner {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
 }
 
-/* Shutter Button Style */
 .captureButton {
   width: 72px;
   height: 72px;
   border-radius: 50%;
-  border: 4px solid white; /* Outer ring */
+  border: 4px solid #e2e8f0;
   background: transparent;
   padding: 4px;
   cursor: pointer;
+  transition: all 0.2s;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-
-  .shutterInner {
-    width: 100%;
-    height: 100%;
-    background-color: white;
-    border-radius: 50%;
-    transition: all 0.2s;
-  }
 
   &:hover {
+    border-color: #cbd5e1;
     transform: scale(1.05);
-    border-color: #e2e8f0;
-    
-    .shutterInner {
-        background-color: #f1f5f9;
-        transform: scale(0.9);
-    }
   }
 
   &:active {
     transform: scale(0.95);
-    .shutterInner {
-        transform: scale(0.85);
-        background-color: #3b82f6; /* Flash color */
-    }
   }
 
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    border-color: #64748b;
-    
-    .shutterInner {
-        background-color: #64748b;
-    }
-  }
-  
   &.loading {
-      animation: breathe 2s infinite;
-      border-color: #3b82f6;
-      
-      .shutterInner {
-          background-color: #3b82f6;
-      }
+    opacity: 0.7;
+    cursor: wait;
+    border-color: #bfdbfe;
+    animation: spin 1s linear infinite;
+  }
+}
+
+.shutterInner {
+  width: 100%;
+  height: 100%;
+  background: #007bff;
+  border-radius: 50%;
+  transition: all 0.2s;
+
+  .captureButton:hover & {
+    background: #0056b3;
   }
 }
 
 .tipText {
-    color: #94a3b8;
-    font-size: 14px;
-    font-weight: 500;
+  font-size: 14px;
+  color: #64748b;
 }
 
-@keyframes breathe {
-    0% { transform: scale(1); opacity: 1; }
-    50% { transform: scale(1.05); opacity: 0.7; }
-    100% { transform: scale(1); opacity: 1; }
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
