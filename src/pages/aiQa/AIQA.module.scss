@@ -625,6 +625,13 @@
   .volumeIconHigh, .volumeIconLow {
       color: #94a3b8;
   }
+
+  .sliderWrapper {
+      height: 120px;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+  }
   
   :global {
     .ant-slider-vertical { margin: 0; padding: 0 16px; }
@@ -644,6 +651,8 @@
       background-color: #ffffff;
       border: 2px solid #007bff;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      left: 30%;
+      border-radius: 50%;
       &::after { display: none; }
     }
     .ant-slider-step { display: none; }
