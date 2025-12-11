@@ -1,5 +1,5 @@
 import React, {useState, useRef, useEffect} from 'react';
-import {useNavigate} from 'react-router-dom';
+import {useNavigate, useLocation} from 'react-router-dom';
 import {Home, Mic, Camera, Keyboard, User, Bot, Send, StopCircle, Volume1, Volume2, FileUp} from 'lucide-react';
 import {message, Upload, Image, Typography, Slider} from 'antd';
 import {CloseCircleFilled, FileTextOutlined} from '@ant-design/icons';
@@ -37,6 +37,7 @@ const renderMarkdown: any = (content) => {
 
 const AIQA = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const [currentMode, setCurrentMode] = useState<InputMode>('text');
     const [textInput, setTextInput] = useState('');
     const [voiceStatus, setVoiceStatus] = useState<VoiceStatus>('idle');
@@ -50,6 +51,7 @@ const AIQA = () => {
     const clientRef = useRef<WsTranscriptionClient>();
     const messageListRef = useRef<HTMLDivElement | null>(null);
     const audioRef = useRef<HTMLAudioElement | null>(null);
+    const initialQuestionRef = useRef<string | null>(null);
     const [spokenMessageId, setSpokenMessageId] = useState<string | number | null>(null);
     const [voiceId, setVoiceId] = useState<string>('');
     const [isAudioPlaying, setIsAudioPlaying] = useState(false);
@@ -100,13 +102,22 @@ const AIQA = () => {
         fetchVoices()
     }, [])
 
-    // 组件卸载时清理音频资源
+    // 组件卸载时清理语音相关资源，确保离开页面即停止播放/录制
     useEffect(() => () => {
         if (audioRef.current) {
             audioRef.current.pause();
+            audioRef.current.currentTime = 0;
             audioRef.current = null;
         }
-        setIsAudioPlaying(false)
+        if (clientRef.current) {
+            try {
+                clientRef.current.stop();
+            } catch (err) {
+                console.error('停止语音客户端失败', err);
+            }
+        }
+        stop?.();
+        setIsAudioPlaying(false);
     }, []);
 
     // 音量变化时同步到当前音频
@@ -390,8 +401,8 @@ const AIQA = () => {
         multiple: true,
     };
 
-    const handleSendText = async () => {
-        const content = textInput?.trim();
+    const handleSendText = async (contentOverride?: string) => {
+        const content = (contentOverride ?? textInput)?.trim();
         // loading 中或无输入时不触发
         if (loading || !content) return;
         const userMsg = {
@@ -420,6 +431,19 @@ const AIQA = () => {
             await handleSendText();
         }
     };
+
+    // 处理从首页预设问题跳转时自动提问
+    useEffect(() => {
+        const state = location.state as { initialQuestion?: string } | undefined;
+        const question = state?.initialQuestion?.trim();
+        if (!question) return;
+        if (initialQuestionRef.current === question) return;
+
+        initialQuestionRef.current = question;
+        setCurrentMode('text');
+        setTextInput(question);
+        handleSendText(question);
+    }, [location.state]);
 
     const getToolbarButtonClasses = (mode: InputMode) => {
         const classNames = [styles.toolbarButton];
