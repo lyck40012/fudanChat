@@ -355,13 +355,13 @@
     :global {
       .ant-slider-vertical { margin: 0; padding: 0 16px; }
       .ant-slider-rail {
-        background-color: #e6f7ff !important;
-        width: 6px !important;
+        background-color: #e6f7ff;
+        width: 6px;
         border-radius: 99px;
       }
       .ant-slider-track {
-        background: #1890ff !important;
-        width: 6px !important;
+        background: #1890ff;
+        width: 6px;
         border-radius: 99px;
       }
       .ant-slider-handle {
@@ -370,6 +370,8 @@
         background-color: #ffffff;
         border: 2px solid #1890ff;
         box-shadow: 0 2px 4px rgba(24, 144, 255, 0.2);
+      left: 30%;
+        border-radius: 50%;
         &::after { display: none; }
       }
       .ant-slider-step { display: none; }
