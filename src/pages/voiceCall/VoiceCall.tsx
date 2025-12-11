@@ -184,9 +184,7 @@ const VoiceCall = () => {
         console.error('[voice-call] Coze SERVER_ERROR', event);
         const err = event as CommonErrorEvent;
         alert(
-          `发生错误：${err?.data?.msg ?? '未知错误'}\nlogid: ${
-            err?.detail?.logid ?? '-'
-          }`,
+          `发生错误：${err?.data?.msg ?? '未知错误'}\nlogid: ${err?.detail?.logid ?? '-'}`,
         );
         clientRef.current?.disconnect();
         clientRef.current = undefined;
@@ -266,137 +264,143 @@ const VoiceCall = () => {
     <div className={styles.page}>
       {/* 9:16 容器 */}
       <div className={styles.phone}>
-        {/* 顶部状态栏 */}
-        <div className={styles.headerBar}>
-          <div className={styles.headerLeft}>
-            {callStatus === 'connecting' && (
-              <>
-                <div className={`${styles.statusDot} ${styles.statusDotConnecting}`} />
-                <span className={styles.statusText}>正在连接数字人...</span>
-              </>
-            )}
-            {callStatus === 'active' && (
-              <>
-                <div className={`${styles.statusDot} ${styles.statusDotActive}`} />
-                <span className={styles.statusText}>语音通话中 · 数字人助手</span>
-              </>
-            )}
-            {callStatus === 'ended' && (
-              <>
-                <div className={`${styles.statusDot} ${styles.statusDotEnded}`} />
-                <span className={styles.statusText}>通话已结束</span>
-              </>
-            )}
-          </div>
-          {callStatus === 'active' && <span className={styles.duration}>{formatDuration(callDuration)}</span>}
-        </div>
+        {/* Corner Decorations */}
+        <div className={styles.cornerTL}></div>
+        <div className={styles.cornerTR}></div>
+        <div className={styles.cornerBL}></div>
+        <div className={styles.cornerBR}></div>
 
-        {/* 主内容区 */}
-        <div className={styles.main}>
-          {/* 左侧：数字人动画 + 对话区 */}
-          <div className={styles.leftPane}>
-            {/* 数字人动画背景 */}
-            <div className={styles.leftBackground}>
-              <div
-                className={`${styles.aiAvatarWrapper} ${
-                  isAISpeaking ? styles.aiAvatarWrapperSpeaking : ''
-                }`}
-              >
+        <div className={styles.contentWrapper}>
+            {/* 顶部状态栏 */}
+            <div className={styles.headerBar}>
+              <div className={styles.headerLeft}>
+                {callStatus === 'connecting' && (
+                  <>
+                    <div className={`${styles.statusDot} ${styles.statusDotConnecting}`} />
+                    <span className={styles.statusText}>正在建立连接...</span>
+                  </>
+                )}
+                {callStatus === 'active' && (
+                  <>
+                    <div className={`${styles.statusDot} ${styles.statusDotActive}`} />
+                    <span className={styles.statusText}>语音链路已激活</span>
+                  </>
+                )}
+                {callStatus === 'ended' && (
+                  <>
+                    <div className={`${styles.statusDot} ${styles.statusDotEnded}`} />
+                    <span className={styles.statusText}>链路已终止</span>
+                  </>
+                )}
               </div>
-              {isAISpeaking && (
-                <>
-                  <div className={styles.waveRingOuter} />
-                  <div className={styles.waveRingInner} />
-                </>
-              )}
+              {callStatus === 'active' && <span className={styles.duration}>{formatDuration(callDuration)}</span>}
             </div>
 
-            <VoiceMessages  clientRef={clientRef}  />
-
-
-            {callStatus === 'connecting' && (
-              <div className={styles.overlayCenter}>
-                <div className={styles.overlayPanel}>
-                  <p className={styles.overlayTitle}>正在建立语音通道</p>
-                  <p className={styles.overlayDesc}>请稍候...</p>
-                </div>
-              </div>
-            )}
-
-            {/* 通话结束提示 */}
-            {callStatus === 'ended' && (
-              <div className={styles.overlayEnd}>
-                <div className={styles.overlayPanelEnd}>
-                  <p className={styles.overlayTitle}>通话已结束</p>
-                  <p className={styles.overlayDesc}>通话时长: {formatDuration(callDuration)}</p>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className={styles.rightPane}>
-              <button onClick={handleGoBack} className={styles.homeButton}>
-                  <Home/>
-                  <span>返回</span>
-              </button>
-
-              <div className={styles.toolbarButtons}>
-                  <button
-                      onClick={isConnected ? handleHangup : handleStartCozeCall}
-                      className={`${styles.toolbarButton} ${isConnected ? styles.hangup : styles.call}`}
-                      disabled={!isConnected && isConnecting}
+            {/* 主内容区 */}
+            <div className={styles.main}>
+              {/* 左侧：数字人动画 + 对话区 */}
+              <div className={styles.leftPane}>
+                {/* 数字人动画背景 */}
+                <div className={styles.leftBackground}>
+                  <div
+                    className={`${styles.aiAvatarWrapper} ${                    isAISpeaking ? styles.aiAvatarWrapperSpeaking : ''                  }`}
                   >
-                      <div className={styles.toolbarIconWrapper}>
-                          {isConnected ? <PhoneOff /> : <Phone />}
-                      </div>
-                      <span>{isConnected ? '挂断' : '通话'}</span>
-                  </button>
-
-                  <button
-                      onClick={handleInterruptCall}
-                      className={`${styles.toolbarButton} ${styles.secondary}`}
-                      disabled={!isConnected || callStatus !== 'active'}
-                  >
-                      <div className={styles.toolbarIconWrapper}>
-                          <CircleStop />
-                      </div>
-                      <span>打断</span>
-                  </button>
-
-                  <button
-                      onClick={toggleMute}
-                      className={`${styles.toolbarButton} ${styles.secondary} ${!audioEnabled ? styles.active : ''}`}
-                      disabled={callStatus !== 'active'}
-                  >
-                      <div className={styles.toolbarIconWrapper}>
-                          {!audioEnabled ? <MicOff /> : <Mic />}
-                      </div>
-                      <span>{!audioEnabled ? '已静音' : '静音'}</span>
-                  </button>
-              </div>
-
-              {/* 音量控制 */}
-              <div className={styles.volumeCard}>
-                  <Volume2 className={styles.volumeIconHigh} size={16} />
-                  <div className={styles.sliderWrapper}>
-                      <Slider
-                          vertical
-                          min={0}
-                          max={100}
-                          value={volume}
-                          onChange={(value) => {
-                              setVolume(value);
-                              if (clientRef.current && isConnected) {
-                                  clientRef.current.setPlaybackVolume(value / 100);
-                              }
-                          }}
-                          disabled={callStatus !== 'active'}
-                          tooltip={{ formatter: (value) => `${value}%`, placement: 'left' }}
-                      />
                   </div>
-                  <Volume1 className={styles.volumeIconLow} size={16} />
+                  {isAISpeaking && (
+                    <>
+                      <div className={styles.waveRingOuter} />
+                      <div className={styles.waveRingInner} />
+                    </>
+                  )}
+                </div>
+
+                <VoiceMessages  clientRef={clientRef}  />
+
+
+                {callStatus === 'connecting' && (
+                  <div className={styles.overlayCenter}>
+                    <div className={styles.overlayPanel}>
+                      <p className={styles.overlayTitle}>正在初始化</p>
+                      <p className={styles.overlayDesc}>安全通道握手中...</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* 通话结束提示 */}
+                {callStatus === 'ended' && (
+                  <div className={styles.overlayEnd}>
+                    <div className={styles.overlayPanelEnd}>
+                      <p className={styles.overlayTitle}>会话结束</p>
+                      <p className={styles.overlayDesc}>通话时长: {formatDuration(callDuration)}</p>
+                    </div>
+                  </div>
+                )}
               </div>
-          </div>
+
+              <div className={styles.rightPane}>
+                  <button onClick={handleGoBack} className={styles.homeButton}>
+                      <Home/>
+                      <span>返回</span>
+                  </button>
+
+                  <div className={styles.toolbarButtons}>
+                      <button
+                          onClick={isConnected ? handleHangup : handleStartCozeCall}
+                          className={`${styles.toolbarButton} ${isConnected ? styles.hangup : styles.call}`}
+                          disabled={!isConnected && isConnecting}
+                      >
+                          <div className={styles.toolbarIconWrapper}>
+                              {isConnected ? <PhoneOff /> : <Phone />}
+                          </div>
+                          <span>{isConnected ? '挂断' : '呼叫'}</span>
+                      </button>
+
+                      <button
+                          onClick={handleInterruptCall}
+                          className={`${styles.toolbarButton} ${styles.secondary}`}
+                          disabled={!isConnected || callStatus !== 'active'}
+                      >
+                          <div className={styles.toolbarIconWrapper}>
+                              <CircleStop />
+                          </div>
+                          <span>打断</span>
+                      </button>
+
+                      <button
+                          onClick={toggleMute}
+                          className={`${styles.toolbarButton} ${styles.secondary} ${!audioEnabled ? styles.active : ''}`}
+                          disabled={callStatus !== 'active'}
+                      >
+                          <div className={styles.toolbarIconWrapper}>
+                              {!audioEnabled ? <MicOff /> : <Mic />}
+                          </div>
+                          <span>{!audioEnabled ? '已静音' : '静音'}</span>
+                      </button>
+                  </div>
+
+                  {/* 音量控制 */}
+                  <div className={styles.volumeCard}>
+                      <Volume2 className={styles.volumeIconHigh} size={14} />
+                      <div className={styles.sliderWrapper}>
+                          <Slider
+                              vertical
+                              min={0}
+                              max={100}
+                              value={volume}
+                              onChange={(value) => {
+                                  setVolume(value);
+                                  if (clientRef.current && isConnected) {
+                                      clientRef.current.setPlaybackVolume(value / 100);
+                                  }
+                              }}
+                              disabled={callStatus !== 'active'}
+                              tooltip={{ formatter: (value) => `${value}%`, placement: 'left' }}
+                          />
+                      </div>
+                      <Volume1 className={styles.volumeIconLow} size={14} />
+                  </div>
+              </div>
+            </div>
         </div>
       </div>
     </div>

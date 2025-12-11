@@ -9,14 +9,19 @@ import {
   FileTextOutlined
 } from "@ant-design/icons";
 
-// 首页组件：使用 Sass 模块进行样式管理
+// 首页组件：科技风格重构
 export function Home() {
   const navigate = useNavigate();
 
   return (
     <div className={styles.page}>
-      {/* 9:16 容器 */}
       <div className={styles.phone}>
+        {/* 装饰性角标 */}
+        <div className={styles.cornerTL}></div>
+        <div className={styles.cornerTR}></div>
+        <div className={styles.cornerBL}></div>
+        <div className={styles.cornerBR}></div>
+
         <div className={styles.contentWrapper}>
           {/* 顶部品牌区 */}
           <div className={styles.header}>
@@ -26,7 +31,7 @@ export function Home() {
               </div>
             </div>
             <h1 className={styles.title}>AI 数字人助手</h1>
-            <p className={styles.subtitle}>语音 & 文字智能问答</p>
+            <p className={styles.subtitle}>智能语音 & 文字问答系统</p>
           </div>
 
           {/* 中部主操作区 */}
@@ -36,12 +41,14 @@ export function Home() {
               onClick={() => navigate('/voice-call')}
               className={`${styles.actionButton} ${styles.actionButtonPrimary}`}
             >
-              <div className={`${styles.actionIconWrapper} ${styles.primaryIcon}`}>
-                  <AudioOutlined />
-              </div>
-              <div className={styles.actionContent}>
-                <h2 className={styles.actionTitle}>语音通话</h2>
-                <p className={styles.actionDesc}>点击开始与数字人实时语音对话，体验自然交互</p>
+              <div className={styles.actionContentInternal}>
+                  <div className={styles.actionIconWrapper}>
+                      <AudioOutlined />
+                  </div>
+                  <div className={styles.actionTextGroup}>
+                    <h2 className={styles.actionTitle}>语音通话</h2>
+                    <p className={styles.actionDesc}>建立语音神经链路 · 实时交互</p>
+                  </div>
               </div>
             </button>
 
@@ -50,51 +57,44 @@ export function Home() {
               onClick={() => navigate('/ai-qa')}
               className={`${styles.actionButton} ${styles.actionButtonSecondary}`}
             >
-              <div className={`${styles.actionIconWrapper} ${styles.secondaryIcon}`}>
-                  <WechatWorkOutlined />
-              </div>
-              <div className={styles.actionContent}>
-                <h2 className={styles.actionTitle}>AI 问答</h2>
-                <p className={styles.actionDesc}>文字聊天模式，支持复杂问题深度解析</p>
+              <div className={styles.actionContentInternal}>
+                  <div className={styles.actionIconWrapper}>
+                      <WechatWorkOutlined />
+                  </div>
+                  <div className={styles.actionTextGroup}>
+                    <h2 className={styles.actionTitle}>AI 问答</h2>
+                    <p className={styles.actionDesc}>接入全域知识数据库 · 深度解析</p>
+                  </div>
               </div>
             </button>
           </div>
 
-          {/* 底部产品介绍区 */}
+          {/* 底部产品介绍区 - 系统状态面板 */}
           <div className={styles.featuresSection}>
             <div className={styles.featuresCard}>
-              <h2 className={styles.featuresTitle}>智能互动能力</h2>
-
-              {/* 能力点 */}
               <div className={styles.featuresList}>
                 <div className={styles.featureItem}>
-                  <div className={`${styles.featureIcon} ${styles.iconBlue}`}>
+                  <div className={styles.featureIcon}>
                     <ThunderboltOutlined />
                   </div>
-                  <div className={styles.featureContent}>
-                    <h3 className={styles.featureContentTitle}>实时响应</h3>
-                    <p className={styles.featureContentDesc}>毫秒级语音识别与回答</p>
-                  </div>
+                  <h3 className={styles.featureContentTitle}>系统延迟</h3>
+                  <p className={styles.featureContentDesc}>12ms</p>
                 </div>
 
                 <div className={styles.featureItem}>
-                  <div className={`${styles.featureIcon} ${styles.iconPurple}`}>
+                  <div className={styles.featureIcon}>
                     <MessageOutlined />
                   </div>
-                  <div className={styles.featureContent}>
-                    <h3 className={styles.featureContentTitle}>多轮对话</h3>
-                    <p className={styles.featureContentDesc}>具备上下文记忆能力</p>
-                  </div>
+                  <h3 className={styles.featureContentTitle}>多轮记忆</h3>
+                  <p className={styles.featureContentDesc}>已激活</p>
                 </div>
 
                 <div className={styles.featureItem}>
-                  <div className={`${styles.featureIcon} ${styles.iconIndigo}`}>
+                  <div className={styles.featureIcon}>
                     <FileTextOutlined />
                   </div>
-                  <div className={styles.featureContent}>
-                    <h3 className={styles.featureContentTitle}>知识问答</h3>
-                    <p className={styles.featureContentDesc}>覆盖广泛的业务知识库</p>
-                  </div>
+                  <h3 className={styles.featureContentTitle}>知识库</h3>
+                  <p className={styles.featureContentDesc}>已同步</p>
                 </div>
               </div>
             </div>
