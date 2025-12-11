@@ -51,7 +51,7 @@ const AIQA = () => {
     const messageListRef = useRef<HTMLDivElement | null>(null);
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const [spokenMessageId, setSpokenMessageId] = useState<string | number | null>(null);
-    const [voiceId, setVoiceId] = useState<string>('female-yufei');
+    const [voiceId, setVoiceId] = useState<string>('');
     const [isAudioPlaying, setIsAudioPlaying] = useState(false);
     const [audioVolume, setAudioVolume] = useState<number>(80);
     const {
@@ -83,7 +83,7 @@ const AIQA = () => {
     useEffect(() => {
         const fetchVoices = async () => {
             try {
-                const res = await fetch('https://api.coze.cn/v1/audio/voices', {
+                const res = await fetch('/api/v1/audio/voices', {
                     method: 'GET',
                     headers: {
                         Authorization: 'Bearer pat_hD3fk5ygNuFPLz5ndwIKYWmwY8qgET9DrruIA3Ean8cCEPfSi6o40EZmMg03TS5P'
@@ -134,7 +134,7 @@ const AIQA = () => {
                 },
                 body: JSON.stringify({
                     voice_id: voiceId || '',
-                    response_format: 'mp3',
+                    response_format: 'wav',
                     input: text,
                 }),
             })
@@ -142,7 +142,7 @@ const AIQA = () => {
                 throw new Error(`TTS 请求失败: ${res.status}`)
             }
             const buffer = await res.arrayBuffer()
-            const blob = new Blob([buffer], {type: 'audio/mpeg'})
+            const blob = new Blob([buffer], {type: 'audio/wav'})
             const url = URL.createObjectURL(blob)
             const audio = new Audio(url)
             audio.volume = audioVolume / 100

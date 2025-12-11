@@ -163,8 +163,8 @@
   }
 
   &.ai {
-    background-color: rgba(255, 255, 255, 0.95);
-    color: #0f172a;
+    background-color: rgba(15,23,42,0.9);
+    color: #f9fafb;
     border-bottom-left-radius: 4px;
   }
 
@@ -244,7 +244,6 @@
 .messageText {
   font-size: 15px;
   line-height: 1.6;
-  white-space: pre-wrap;
   margin: 0;
   
   /* Improve markdown styles inside message */
