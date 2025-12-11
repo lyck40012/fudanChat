@@ -59,6 +59,17 @@ const VoiceCall = () => {
     }
   }, [callStatus]);
 
+  // 组件卸载时清理资源
+  useEffect(() => {
+    return () => {
+      // 页面销毁时断开连接
+      if (clientRef.current) {
+        clientRef.current.disconnect();
+        clientRef.current = undefined;
+      }
+    };
+  }, []);
+
   // 格式化通话时长
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -238,6 +249,18 @@ const VoiceCall = () => {
       }
   };
 
+  // 返回首页前先挂断通话
+  const handleGoBack = () => {
+      // 先终止对话
+      if (clientRef.current) {
+          clientRef.current.disconnect();
+          clientRef.current = undefined;
+          setIsConnected(false);
+      }
+      // 再返回首页
+      navigate('/');
+  };
+
 
   return (
     <div className={styles.page}>
@@ -312,7 +335,7 @@ const VoiceCall = () => {
           </div>
 
           <div className={styles.rightPane}>
-              <button onClick={() => navigate('/')} className={styles.homeButton}>
+              <button onClick={handleGoBack} className={styles.homeButton}>
                   <Home/>
                   <span>返回</span>
               </button>
