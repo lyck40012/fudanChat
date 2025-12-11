@@ -41,10 +41,10 @@ const VoiceCall = () => {
     const timer = setTimeout(() => {
       // 在这里写你想要执行的事件逻辑
       console.log('页面加载2秒后触发的事件');
-        setCallStatus('active')
-        handleStartCozeCall()
-    }, 2000); // 2秒 = 2000毫秒
 
+    }, 2000); // 2秒 = 2000毫秒
+      setCallStatus('active')
+      handleStartCozeCall()
     // 清理定时器，防止内存泄漏
     return () => clearTimeout(timer);
   }, []); // 空依赖数组表示只在组件挂载时执行一次
