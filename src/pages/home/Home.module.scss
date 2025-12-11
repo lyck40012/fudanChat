@@ -186,65 +186,6 @@
   line-height: 1.4;
 }
 
-/* Features Section */
-.featuresSection {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  padding-bottom: 24px;
-}
-
-.featuresCard {
-  background: #f8fafc;
-  border-radius: 24px;
-  padding: 20px;
-  border: 1px solid #f1f5f9;
-}
-
-.featuresList {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.featureItem {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  flex: 1;
-  padding: 12px 8px;
-  border-radius: 16px;
-  background: #ffffff;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-}
-
-.featureIcon {
-  font-size: 20px;
-  color: #007bff;
-  margin-bottom: 8px;
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  background: #eff6ff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.featureContentTitle {
-  font-size: 13px;
-  font-weight: 600;
-  color: #334155;
-  margin: 0 0 2px 0;
-}
-
-.featureContentDesc {
-  font-size: 11px;
-  color: #94a3b8;
-  margin: 0;
-}
 
 /* Remove decorative corners from TSX if present, or hide them here */
 .cornerTL, .cornerTR, .cornerBL, .cornerBR {

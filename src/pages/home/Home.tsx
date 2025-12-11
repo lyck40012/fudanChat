@@ -3,10 +3,7 @@ import styles from './Home.module.scss';
 import {
   AudioOutlined,
   DoubleRightOutlined,
-  WechatWorkOutlined,
-  ThunderboltOutlined,
-  MessageOutlined,
-  FileTextOutlined
+  WechatWorkOutlined
 } from "@ant-design/icons";
 
 // 首页组件：医疗风格重构
@@ -59,36 +56,6 @@ export function Home() {
             </button>
           </div>
 
-          {/* 底部产品介绍区 - 简洁的功能展示 */}
-          <div className={styles.featuresSection}>
-            <div className={styles.featuresCard}>
-              <div className={styles.featuresList}>
-                <div className={styles.featureItem}>
-                  <div className={styles.featureIcon}>
-                    <ThunderboltOutlined />
-                  </div>
-                  <h3 className={styles.featureContentTitle}>快速响应</h3>
-                  <p className={styles.featureContentDesc}>秒级回复</p>
-                </div>
-
-                <div className={styles.featureItem}>
-                  <div className={styles.featureIcon}>
-                    <MessageOutlined />
-                  </div>
-                  <h3 className={styles.featureContentTitle}>多轮问诊</h3>
-                  <p className={styles.featureContentDesc}>上下文记忆</p>
-                </div>
-
-                <div className={styles.featureItem}>
-                  <div className={styles.featureIcon}>
-                    <FileTextOutlined />
-                  </div>
-                  <h3 className={styles.featureContentTitle}>专业知识</h3>
-                  <p className={styles.featureContentDesc}>权威数据库</p>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
