@@ -1,14 +1,26 @@
 import { useNavigate } from 'react-router-dom';
 import styles from './Home.module.scss';
 import {
-  AudioOutlined,
+  FileTextOutlined,
+  MessageOutlined,
   DoubleRightOutlined,
-  WechatWorkOutlined
 } from "@ant-design/icons";
 
-// 首页组件：医疗风格重构
+// 首页组件：医疗智能体风格
 export function Home() {
   const navigate = useNavigate();
+
+  // 预设问题列表
+  const presetQuestions = [
+    '便秘怎么办？',
+    '最近总是胃痛，还拉肚子？',
+    '我有肠癌家族史，怎么查？',
+  ];
+
+  // 处理预设问题点击
+  const handlePresetClick = (question: string) => {
+    navigate('/ai-qa', { state: { initialQuestion: question } });
+  };
 
   return (
     <div className={styles.page}>
@@ -16,46 +28,79 @@ export function Home() {
         <div className={styles.contentWrapper}>
           {/* 顶部品牌区 */}
           <div className={styles.header}>
-            <div className={styles.headerMain}>
-              <div className={styles.logo}>
-                  <DoubleRightOutlined />
-              </div>
+            <div className={styles.logoCircle}>
+              <DoubleRightOutlined className={styles.logoIcon} />
             </div>
-            <h1 className={styles.title}>复旦医疗助手</h1>
-            <p className={styles.subtitle}>智能语音 & 文字问诊系统</p>
+            <h1 className={styles.title}>镜观智能体</h1>
+            <p className={styles.subtitle}>消化内镜AI全流程辅助</p>
           </div>
 
-          {/* 中部主操作区 */}
-          <div className={styles.actions}>
-            {/* 语音通话按钮 */}
+          {/* 主功能入口 - 语音通话和问答助手 */}
+          <div className={styles.mainActions}>
             <button
               onClick={() => navigate('/voice-call')}
-              className={`${styles.actionButton} ${styles.actionButtonPrimary}`}
+              className={`${styles.mainButton} ${styles.mainButtonVoice}`}
             >
-              <div className={styles.actionIconWrapper}>
-                  <AudioOutlined />
-              </div>
-              <div className={styles.actionTextGroup}>
-                <h2 className={styles.actionTitle}>语音问诊</h2>
-                <p className={styles.actionDesc}>实时语音沟通 · 快速诊断</p>
+              <div className={styles.mainButtonIcon}>📞</div>
+              <div className={styles.mainButtonContent}>
+                <h2 className={styles.mainButtonTitle}>语音通话</h2>
+                <p className={styles.mainButtonDesc}>实时语音对话 · 智能诊断</p>
               </div>
             </button>
 
-            {/* AI 问答按钮 */}
             <button
               onClick={() => navigate('/ai-qa')}
-              className={`${styles.actionButton} ${styles.actionButtonSecondary}`}
+              className={`${styles.mainButton} ${styles.mainButtonChat}`}
             >
-              <div className={styles.actionIconWrapper}>
-                  <WechatWorkOutlined />
-              </div>
-              <div className={styles.actionTextGroup}>
-                <h2 className={styles.actionTitle}>智能问答</h2>
-                <p className={styles.actionDesc}>全科知识库 · 深度解析</p>
+              <div className={styles.mainButtonIcon}>💬</div>
+              <div className={styles.mainButtonContent}>
+                <h2 className={styles.mainButtonTitle}>问答助手</h2>
+                <p className={styles.mainButtonDesc}>文字问答 · 图片识别</p>
               </div>
             </button>
           </div>
 
+          {/* 次要功能卡片区 */}
+          <div className={styles.secondaryCards}>
+            {/* 上传报告卡片 */}
+            <button
+              onClick={() => navigate('/ai-qa')}
+              className={`${styles.card} ${styles.cardPrimary}`}
+            >
+              <div className={styles.cardBorder}></div>
+              <FileTextOutlined className={styles.cardIcon} />
+              <span className={styles.cardText}>上传报告,立即解读!</span>
+              <div className={styles.cardArrow}>→</div>
+            </button>
+
+            {/* 随便问问卡片 */}
+            <button
+              onClick={() => navigate('/voice-call')}
+              className={`${styles.card} ${styles.cardSecondary}`}
+            >
+              <div className={styles.cardBorder}></div>
+              <MessageOutlined className={styles.cardIcon} />
+              <span className={styles.cardText}>没有报告,随便问问!</span>
+              <div className={styles.cardArrow}>→</div>
+            </button>
+          </div>
+
+          {/* 预设问题区 */}
+          <div className={styles.presetSection}>
+            <p className={styles.presetLabel}>您可以问:</p>
+            <div className={styles.presetQuestions}>
+              {presetQuestions.map((question, index) => (
+                <button
+                  key={index}
+                  onClick={() => handlePresetClick(question)}
+                  className={styles.presetButton}
+                >
+                  <span className={styles.presetIcon}>?</span>
+                  <span className={styles.presetText}>{question}</span>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>
