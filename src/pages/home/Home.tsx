@@ -47,17 +47,6 @@ export function Home() {
                 <p className={styles.mainButtonDesc}>实时语音对话 · 智能诊断</p>
               </div>
             </button>
-
-            <button
-              onClick={() => navigate('/ai-qa')}
-              className={`${styles.mainButton} ${styles.mainButtonChat}`}
-            >
-              <div className={styles.mainButtonIcon}>💬</div>
-              <div className={styles.mainButtonContent}>
-                <h2 className={styles.mainButtonTitle}>问答助手</h2>
-                <p className={styles.mainButtonDesc}>文字问答 · 图片识别</p>
-              </div>
-            </button>
           </div>
 
           {/* 次要功能卡片区 */}

@@ -1,11 +1,7 @@
 import {useCallback, useRef, useState} from 'react'
 
 export function useChatSSE({url, headers = {}}) {
-    const [messages, setMessages] = useState<any[]>([{
-        id: 1,
-        role: 'ai',
-        content: '您好！我是AI数字人助手，您可以通过语音、文字、上传文件或拍照来向我提问。'
-    }])
+    const [messages, setMessages] = useState<any[]>([])
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
    const isConversationRef = useRef<boolean>(false)
