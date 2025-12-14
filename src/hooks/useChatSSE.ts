@@ -45,14 +45,13 @@ export function useChatSSE({url, headers = {}}) {
             }]
 
             userMessage.imageUrls.forEach(x => {
-                console.log("x========>",x)
                 let obj = {
                     type: x.type.includes('image') ? "image" : 'file',
                 }
                 if (x?.isShoot) {
                     obj['file_url'] = x.url
                 } else {
-                    obj['file_id'] = x.response.data.id
+                    obj['file_id'] = x.response.id
                 }
                 arr.push(obj)
             })

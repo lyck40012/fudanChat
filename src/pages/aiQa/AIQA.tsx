@@ -14,7 +14,7 @@ import {
     WsTranscriptionClient
 } from "@coze/api/ws-tools";
 
-import {CommonErrorEvent, TranscriptionsMessageUpdateEvent, WebsocketsEventType} from "@coze/api";
+import {CommonErrorEvent, TranscriptionsMessageUpdateEvent, WebsocketsEventType, CozeAPI} from "@coze/api";
 import { useChatSSE } from '../../hooks/useChatSSE'
 import { CameraCaptureModal } from './CameraCaptureModal'
 type InputMode = 'voice' | 'file' | 'camera' | 'text';
@@ -38,6 +38,14 @@ const renderMarkdown: any = (content) => {
 const AIQA = () => {
     const navigate = useNavigate();
     const location = useLocation();
+
+    // 创建 Coze API 客户端实例
+    const cozeClient = useRef(new CozeAPI({
+        token: 'pat_hD3fk5ygNuFPLz5ndwIKYWmwY8qgET9DrruIA3Ean8cCEPfSi6o40EZmMg03TS5P',
+        allowPersonalAccessTokenInBrowser: true,
+        baseURL: 'https://api.coze.cn',
+    })).current;
+
     const [currentMode, setCurrentMode] = useState<InputMode>('text');
     const [textInput, setTextInput] = useState('');
     const [voiceStatus, setVoiceStatus] = useState<VoiceStatus>('idle');
@@ -382,33 +390,24 @@ const AIQA = () => {
         }
         return file.url || '';
     };
-    // 使用 fetch 手动上传文件
+    // 使用扣子 SDK 上传文件
     const uploadFileWithFetch = async (file: UploadFile) => {
-        const formData = new FormData();
-        formData.append('file', file.originFileObj as Blob);
         try {
+            // 更新文件状态为上传中
             setFileList(prev => prev.map(f =>
                 f.uid === file.uid ? { ...f, status: 'uploading' } : f
             ));
 
-            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/v1/files/upload`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': 'Bearer pat_hD3fk5ygNuFPLz5ndwIKYWmwY8qgET9DrruIA3Ean8cCEPfSi6o40EZmMg03TS5P',
-                },
-                body: formData,
+            // 使用 Coze SDK 上传文件
+            const result = await cozeClient.files.upload({
+                file: file.originFileObj as File,
             });
 
-            if (!response.ok) {
-                throw new Error(`上传失败: ${response.status}`);
-            }
-
-            const data = await response.json();
-            console.log('上传成功，返回数据:', data);
+            console.log('上传成功，返回数据:', result);
 
             // 更新文件状态为成功
             setFileList(prev => prev.map(f =>
-                f.uid === file.uid ? { ...f, status: 'done', response: data } : f
+                f.uid === file.uid ? { ...f, status: 'done', response: result } : f
             ));
             message.success(`${file.name} 文件上传成功`);
 
