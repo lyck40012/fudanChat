@@ -137,7 +137,9 @@ const AIQA = () => {
             audioRef.current.volume = audioVolume / 100
         }
     }, [audioVolume]);
-
+    useEffect(() => {
+        stopAudio()
+    }, [currentMode]);
     const playSpeech = async (text: string) => {
         if (!voiceId) return
         if (!text?.trim()) return;
@@ -297,6 +299,7 @@ const AIQA = () => {
 
 
     const startRecording = () => {
+        stopAudio()
         // 正在生成回答时不允许再次录音
         if (loading) return;
         if (currentMode !== 'voice') return;
@@ -331,6 +334,7 @@ const AIQA = () => {
 
     const openCamera = () => {
         // setCurrentMode('camera');
+        stopAudio()
         setCameraModalVisible(true);
     };
 
@@ -423,33 +427,27 @@ const AIQA = () => {
         multiple: true,
     };
 
-    const handleSendText = async (contentOverride?: string) => {
-        // 确保 contentOverride 和 textInput 都是字符串类型
-        let rawContent = ''
-        if (typeof contentOverride !== 'string'&&contentOverride) {
-            rawContent = textInput
-        }else{
-            rawContent = contentOverride
-        }
-        const content = rawContent.trim();
-        // loading 中或无输入时不触发
-        if (loading || !content) return;
-
-        // 停止正在播放的语音
+    const stopAudio =()=>{
         if (audioRef.current) {
             audioRef.current.pause();
             audioRef.current.currentTime = 0;
             audioRef.current = null;
         }
         setIsAudioPlaying(false);
-
         // 终止正在进行的 TTS 请求
         if (speechAbortRef.current) {
             speechAbortRef.current.abort();
             speechAbortRef.current = null;
         }
+    }
 
-        // 取消正在进行的语音录制和识别
+    const handleSendText = async (contentOverride?: string) => {
+
+        const content = (contentOverride || textInput).trim();
+        // loading 中或无输入时不触发
+        if (loading || !content) return;
+
+        stopAudio()
 
 
         const userMsg = {
@@ -472,12 +470,6 @@ const AIQA = () => {
         }
     };
 
-    const handleKeyPress = async (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            await handleSendText();
-        }
-    };
 
     // 处理从首页预设问题跳转时自动提问
     useEffect(() => {
@@ -654,13 +646,20 @@ const AIQA = () => {
                                             <textarea
                                                 value={textInput}
                                                 onChange={(e) => setTextInput(e.target.value)}
-                                                onKeyPress={handleKeyPress}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter' && !e.shiftKey) {
+                                                        e.preventDefault();
+                                                        handleSendText();
+                                                    }
+                                                }}
                                                 placeholder="请输入指令..."
                                                 className={styles.textInput}
                                                 disabled={loading}
                                                 rows={1}
                                             />
-                                                <button onClick={handleSendText} className={styles.sendButton} disabled={loading}>
+                                                <button onClick={()=>{
+                                                    handleSendText()
+                                                }} className={styles.sendButton} disabled={loading}>
                                                     <Send size={18} />
                                                 </button>
                                             </div>
@@ -702,6 +701,9 @@ const AIQA = () => {
 
                                     <Upload {...uploadProps} style={{ width: '100%' }}>
                                         <button
+                                            onClick={()=>{
+                                                stopAudio()
+                                            }}
                                             className={getToolbarButtonClasses('file')}
                                         >
                                             <div className={styles.toolbarIconWrapper}>
