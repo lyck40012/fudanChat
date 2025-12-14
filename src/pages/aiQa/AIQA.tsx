@@ -94,7 +94,8 @@ const AIQA = () => {
                 })
                 if (!res.ok) throw new Error(`拉取音色失败: ${res.status}`)
                 const data = await res.json()
-                const id = data?.data?.voice_list?.[0]?.voice_id
+              let findItem = data?.data?.voice_list?.find(x=>x.voice_id=='7426725529589661723')
+                const id = findItem?.voice_id
                 if (id) setVoiceId(id)
             } catch (err) {
                 console.error('获取音色失败', err)
