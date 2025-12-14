@@ -424,9 +424,20 @@ const AIQA = () => {
     };
 
     const handleSendText = async (contentOverride?: string) => {
-        const content = (contentOverride ?? textInput)?.trim();
+        // 确保 contentOverride 和 textInput 都是字符串类型
+        let rawContent = ''
+        if (typeof contentOverride !== 'string'&&contentOverride) {
+            rawContent = textInput
+        }else{
+            rawContent = contentOverride
+        }
+        const content = rawContent.trim();
         // loading 中或无输入时不触发
         if (loading || !content) return;
+
+        // 取消正在进行的语音录制和识别
+
+
         const userMsg = {
             id: Date.now(),
             role: 'user',
@@ -457,7 +468,17 @@ const AIQA = () => {
     // 处理从首页预设问题跳转时自动提问
     useEffect(() => {
         const state = location.state as { initialQuestion?: string } | undefined;
-        const question = state?.initialQuestion?.trim();
+        const rawQuestion = state?.initialQuestion;
+
+        // 严格检查：确保 initialQuestion 是字符串类型
+        if (typeof rawQuestion !== 'string') {
+            if (rawQuestion !== undefined) {
+                console.warn('initialQuestion 不是字符串类型，已忽略', rawQuestion);
+            }
+            return;
+        }
+
+        const question = rawQuestion.trim();
         if (!question) return;
         if (initialQuestionRef.current === question) return;
 
