@@ -435,6 +435,20 @@ const AIQA = () => {
         // loading 中或无输入时不触发
         if (loading || !content) return;
 
+        // 停止正在播放的语音
+        if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current.currentTime = 0;
+            audioRef.current = null;
+        }
+        setIsAudioPlaying(false);
+
+        // 终止正在进行的 TTS 请求
+        if (speechAbortRef.current) {
+            speechAbortRef.current.abort();
+            speechAbortRef.current = null;
+        }
+
         // 取消正在进行的语音录制和识别
 
 

@@ -51,9 +51,8 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({
             width={600}
             centered
             maskClosable={false}
-            className={styles.modalCustom}
+            wrapClassName={styles.modalCustom}
             closeIcon={null} // 隐藏默认关闭图标，使用自定义的
-            bodyStyle={{ padding: 0, backgroundColor: 'transparent' }}
         >
             <div className={styles.container}>
                 {/* 顶部标题栏 */}
