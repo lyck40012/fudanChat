@@ -64,7 +64,7 @@ export function Home() {
 
             {/* 随便问问卡片 */}
             <button
-              onClick={() => navigate('/voice-call')}
+              onClick={() => navigate('/vai-qa')}
               className={`${styles.card} ${styles.cardSecondary}`}
             >
               <div className={styles.cardBorder}></div>

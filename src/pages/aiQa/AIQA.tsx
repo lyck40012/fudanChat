@@ -64,7 +64,7 @@ const AIQA = () => {
         start,
         stop
     } = useChatSSE({
-        url: '/api/v3/chat',
+        url: `${import.meta.env.VITE_API_BASE_URL}/v3/chat`,
     })
     useEffect(() => {
         //获取权限
@@ -86,7 +86,7 @@ const AIQA = () => {
     useEffect(() => {
         const fetchVoices = async () => {
             try {
-                const res = await fetch('/api/v1/audio/voices', {
+                const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/v1/audio/voices`, {
                     method: 'GET',
                     headers: {
                         Authorization: 'Bearer pat_hD3fk5ygNuFPLz5ndwIKYWmwY8qgET9DrruIA3Ean8cCEPfSi6o40EZmMg03TS5P'
@@ -155,7 +155,7 @@ const AIQA = () => {
                 audioRef.current = null;
             }
             setIsAudioPlaying(false)
-            const res = await fetch('https://api.coze.cn/v1/audio/speech', {
+            const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/v1/audio/speech`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -388,7 +388,7 @@ const AIQA = () => {
     const uploadProps: UploadProps = {
         fileList,
         onChange: handleFileUpload,
-        action: '/api/v1/files/upload',
+        action: `${import.meta.env.VITE_API_BASE_URL}/v1/files/upload`,
         headers: {
             'Authorization': 'Bearer pat_hD3fk5ygNuFPLz5ndwIKYWmwY8qgET9DrruIA3Ean8cCEPfSi6o40EZmMg03TS5P',
         },
