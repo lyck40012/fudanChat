@@ -45,7 +45,7 @@ const AIQA = () => {
         allowPersonalAccessTokenInBrowser: true,
         baseURL: 'https://api.coze.cn',
     })).current;
-
+    const recognizeResult = useRef<Message>({} as Message);
     const [currentMode, setCurrentMode] = useState<InputMode>('text');
     const [textInput, setTextInput] = useState('');
     const [voiceStatus, setVoiceStatus] = useState<VoiceStatus>('idle');
@@ -54,7 +54,6 @@ const AIQA = () => {
     const [selectedInputDevice, setSelectedInputDevice] = useState<string>('');
     const [hasPermission, setHasPermission] = useState<boolean | null>(null);
     const [denoiserSupported, setDenoiserSupported] = useState<boolean>(false);
-    const [recognizeResult,setRecognizeResult] = useState<Message>({} as Message) //暂存语音识别结果
     const [cameraModalVisible, setCameraModalVisible] = useState(false);
     const clientRef = useRef<WsTranscriptionClient>();
     const messageListRef = useRef<HTMLDivElement | null>(null);
@@ -136,7 +135,7 @@ const AIQA = () => {
         }
         pressStartTimeRef.current = null;
         setVoiceStatus('idle');
-        setRecognizeResult({} as Message);
+        recognizeResult.current = {}
         stop?.();
         setIsAudioPlaying(false);
     }, []);
@@ -283,14 +282,14 @@ const AIQA = () => {
                     content: event.data.content,
                     content_type:'text'
                 };
-                setRecognizeResult(userMsg)
+            recognizeResult.current =userMsg
             },
         );
 
         // 监听错误事件
         client.on(WebsocketsEventType.ERROR, (error: unknown) => {
             console.error(error);
-            message.error((error as CommonErrorEvent).data.msg);
+            // message.error((error as CommonErrorEvent).data.msg);
         });
         clientRef.current = client;
     }
@@ -324,42 +323,49 @@ const AIQA = () => {
     };
 
     const stopRecording = async () => {
-        if (currentMode !== 'voice' || voiceStatus !== 'recording') return;
-
+        if (currentMode !== 'voice' || voiceStatus !== 'recording'){
+            message.error('111111111111111')
+            return
+        };
         // 如果有文件正在上传，不允许发送
         if (isUploading) {
             message.warning('文件正在上传中，请稍候...');
             setVoiceStatus('idle');
             return;
         }
-
         const pressDuration = pressStartTimeRef.current ? Date.now() - pressStartTimeRef.current : 0;
         pressStartTimeRef.current = null;
-        clientRef.current.stop()
+
+        if(!recognizeResult?.current?.content&&!fileList.length){
+            setVoiceStatus('idle');
+            clientRef?.current?.stop()
+            return;
+        }
         if (pressDuration < 500) {
             setVoiceStatus('idle');
+            clientRef?.current?.stop()
             message.warning('时间过短');
             return;
         }
-        setVoiceStatus('processing')
-        console.log("recognizeResult=======>",recognizeResult)
-        // 调用 /v3/chat 接口
         try {
+            setTimeout(()=>{
+                clientRef?.current?.stop()
+                const messageWithImages = {
+                    ...(recognizeResult?.current ||{}),
+                    imageUrls: fileList.length > 0 ? fileList : undefined
+                };
+                start(messageWithImages)
+                // 发送后清空文件列表
+                setFileList([]);
+            },1000)
             // 将上传的图片附加到语音识别结果中
-            const messageWithImages = {
-                ...recognizeResult,
-                imageUrls: fileList.length > 0 ? fileList : undefined
-            };
-            start(messageWithImages)
-            // 发送后清空文件列表
-            setFileList([]);
+
         } catch (error) {
             console.error('调用chat接口失败:', error);
             message.error('请求失败');
         }
+        recognizeResult.current = {}
         setVoiceStatus('idle');
-        setRecognizeResult({} as Message)
-
     };
 
     const openCamera = () => {
@@ -373,7 +379,6 @@ const AIQA = () => {
     };
 
     const handleCapturedImage = (url: string) => {
-        console.log("Captured image URL:", url);
         setFileList([...fileList, {
             uid: Date.now().toString(),
             url,
@@ -420,7 +425,6 @@ const AIQA = () => {
                 file: file.originFileObj as File,
             });
 
-            console.log('上传成功，返回数据:', result);
 
             // 更新文件状态为成功
             setFileList(prev => prev.map(f =>
@@ -646,7 +650,7 @@ const AIQA = () => {
                                                                         </Image.PreviewGroup>
                                                                     </div>
                                                                 )}
-                                                                <p className={styles.messageText}>{showLoadingBubble ? 'AI识别中...' : renderMarkdown(message.content)}</p>
+                                                                <p className={styles.messageText}>{showLoadingBubble ? 'AI识别中...' : renderMarkdown(message.content ||'')}</p>
                                                             </div>
                                                         )}
                                                     </div>
