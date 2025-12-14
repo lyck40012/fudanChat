@@ -274,7 +274,13 @@
   margin: 0;
   
   :global {
-    p { margin-bottom: 8px; &:last-child { margin-bottom: 0; } }
+    p {
+      overflow: auto;
+      margin-bottom: 8px;
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
     
     code { 
         background-color: #f1f5f9; 

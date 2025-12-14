@@ -45,6 +45,7 @@ export function useChatSSE({url, headers = {}}) {
             }]
 
             userMessage.imageUrls.forEach(x => {
+                console.log("x========>",x)
                 let obj = {
                     type: x.type.includes('image') ? "image" : 'file',
                 }

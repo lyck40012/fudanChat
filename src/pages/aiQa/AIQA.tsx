@@ -322,7 +322,14 @@ const AIQA = () => {
         console.log("recognizeResult=======>",recognizeResult)
         // 调用 /v3/chat 接口
         try {
-            start(recognizeResult)
+            // 将上传的图片附加到语音识别结果中
+            const messageWithImages = {
+                ...recognizeResult,
+                imageUrls: fileList.length > 0 ? fileList : undefined
+            };
+            start(messageWithImages)
+            // 发送后清空文件列表
+            setFileList([]);
         } catch (error) {
             console.error('调用chat接口失败:', error);
             message.error('请求失败');
@@ -353,20 +360,7 @@ const AIQA = () => {
         setCurrentMode('text');
     };
 
-    const handleFileUpload: UploadProps['onChange'] = (info) => {
-        let newFileList = [...info.fileList];
-        console.log("info.fileList===>",newFileList)
-        setFileList(newFileList);
-        if (info.file.status === 'uploading') {
-            console.log('文件上传中:', info.file.name);
-        } else if (info.file.status === 'done') {
-            message.success(`${info.file.name} 文件上传成功`);
 
-        } else if (info.file.status === 'error') {
-            console.error('上传失败:', info.file.error);
-            message.error(`${info.file.name} 文件上传失败: ${info.file.error?.message || '未知错误'}`);
-        }
-    };
 
     // 移除文件
     const handleRemoveFile = (file: UploadFile) => {
@@ -382,27 +376,57 @@ const AIQA = () => {
 
     // 获取文件预览URL
     const getFilePreviewUrl = (file: UploadFile) => {
-
         if (file.originFileObj) {
             return URL.createObjectURL(file.originFileObj);
         }
         return file.url || '';
     };
+    // 使用 fetch 手动上传文件
+    const uploadFileWithFetch = async (file: UploadFile) => {
+        const formData = new FormData();
+        formData.append('file', file.originFileObj as Blob);
+        try {
+            setFileList(prev => prev.map(f =>
+                f.uid === file.uid ? { ...f, status: 'uploading' } : f
+            ));
 
+            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/v1/files/upload`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer pat_hD3fk5ygNuFPLz5ndwIKYWmwY8qgET9DrruIA3Ean8cCEPfSi6o40EZmMg03TS5P',
+                },
+                body: formData,
+            });
+
+            if (!response.ok) {
+                throw new Error(`上传失败: ${response.status}`);
+            }
+
+            const data = await response.json();
+            console.log('上传成功，返回数据:', data);
+
+            // 更新文件状态为成功
+            setFileList(prev => prev.map(f =>
+                f.uid === file.uid ? { ...f, status: 'done', response: data } : f
+            ));
+            message.success(`${file.name} 文件上传成功`);
+
+        } catch (error) {
+            console.error('上传失败:', error);
+            // 上传失败时从列表中移除该文件
+            setFileList(prev => prev.filter(f => f.uid !== file.uid));
+            message.error(`${file.name} 文件上传失败: ${(error as Error).message || '未知错误'}`);
+        }
+    };
+
+    const handleFileUpload: UploadProps['onChange'] = (info) => {
+        console.log('文件变化:', info.fileList);
+    };
     const uploadProps: UploadProps = {
         fileList,
         onChange: handleFileUpload,
-        action: `${import.meta.env.VITE_API_BASE_URL}/v1/files/upload`,
-        headers: {
-            'Authorization': 'Bearer pat_hD3fk5ygNuFPLz5ndwIKYWmwY8qgET9DrruIA3Ean8cCEPfSi6o40EZmMg03TS5P',
-        },
-        name: 'file',
-        data: (file) => {
-            const formData = new FormData();
-            formData.append('file', file);
-            return formData;
-        },
         beforeUpload: (file) => {
+            // 验证文件类型
             const isValidType = [
                 'application/pdf',
                 'image/jpeg',
@@ -415,12 +439,29 @@ const AIQA = () => {
                 message.error('只支持上传 PDF、图片、Word 文件!');
                 return Upload.LIST_IGNORE;
             }
+
+            // 验证文件大小
             const isLt10M = file.size / 1024 / 1024 < 10;
             if (!isLt10M) {
                 message.error('文件大小不能超过 10MB!');
                 return Upload.LIST_IGNORE;
             }
-            return true;
+
+            // 添加到文件列表
+            const newFile: UploadFile = {
+                uid: file.uid,
+                name: file.name,
+                status: 'uploading',
+                originFileObj: file,
+                type: file.type,
+            };
+            setFileList(prev => [...prev, newFile]);
+
+            // 使用 fetch 手动上传
+            uploadFileWithFetch(newFile);
+
+            // 返回 false 阻止 antd 的自动上传
+            return false;
         },
         showUploadList: false,
         maxCount: 3,
@@ -445,8 +486,9 @@ const AIQA = () => {
 
         const content = (contentOverride || textInput).trim();
         // loading 中或无输入时不触发
-        if (loading || !content) return;
-
+        if(!fileList.length){
+            if (loading || !content ) return;
+        }
         stopAudio()
 
 
@@ -667,6 +709,40 @@ const AIQA = () => {
                                     )}
                                     {voiceStatus === 'idle' && currentMode !== 'text' && (
                                         <div className={styles.idleText}>
+                                            {/* 文件列表显示区域 */}
+                                            {fileList.length > 0 && (
+                                                <div className={styles.fileListContainer}>
+                                                    {fileList.map((file) => (
+                                                        <div key={file.uid} className={styles.fileItem}>
+                                                            {isImageFile(file) ? (
+                                                                <Image
+                                                                    width={32}
+                                                                    height={32}
+                                                                    src={getFilePreviewUrl(file)}
+                                                                    alt={file.name}
+                                                                    style={{ borderRadius: '2px', objectFit: 'cover' }}
+                                                                    preview={{
+                                                                        mask: '预览'
+                                                                    }}
+                                                                />
+                                                            ) : (
+                                                                <div className={styles.filePreview}>
+                                                                    <FileTextOutlined className={styles.fileIcon} />
+                                                                </div>
+                                                            )}
+                                                            <div className={styles.fileInfo}>
+                                                                <Text className={styles.fileName} ellipsis={{ tooltip: file.name }}>
+                                                                    {file.name}
+                                                                </Text>
+                                                            </div>
+                                                            <CloseCircleFilled
+                                                                className={styles.removeFileButton}
+                                                                onClick={() => handleRemoveFile(file)}
+                                                            />
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
                                             <p>
                                                 {currentMode === 'voice' && '长按录入语音数据'}
                                                 {currentMode === 'file' && '文件上传就绪'}
