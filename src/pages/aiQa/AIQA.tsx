@@ -65,6 +65,7 @@ const AIQA = () => {
     const [voiceId, setVoiceId] = useState<string>('');
     const [isAudioPlaying, setIsAudioPlaying] = useState(false);
     const [audioVolume, setAudioVolume] = useState<number>(80);
+    const [isUploading, setIsUploading] = useState(false); // 是否有文件正在上传
     const {
         messages,
         loading,
@@ -309,6 +310,11 @@ const AIQA = () => {
 
     const startRecording = () => {
         stopAudio()
+        // 如果有文件正在上传，不允许录音
+        if (isUploading) {
+            message.warning('文件正在上传中，请稍候...');
+            return;
+        }
         // 正在生成回答时不允许再次录音
         if (loading) return;
         if (currentMode !== 'voice') return;
@@ -319,6 +325,14 @@ const AIQA = () => {
 
     const stopRecording = async () => {
         if (currentMode !== 'voice' || voiceStatus !== 'recording') return;
+
+        // 如果有文件正在上传，不允许发送
+        if (isUploading) {
+            message.warning('文件正在上传中，请稍候...');
+            setVoiceStatus('idle');
+            return;
+        }
+
         const pressDuration = pressStartTimeRef.current ? Date.now() - pressStartTimeRef.current : 0;
         pressStartTimeRef.current = null;
         clientRef.current.stop()
@@ -393,6 +407,9 @@ const AIQA = () => {
     // 使用扣子 SDK 上传文件
     const uploadFileWithFetch = async (file: UploadFile) => {
         try {
+            // 标记开始上传
+            setIsUploading(true);
+
             // 更新文件状态为上传中
             setFileList(prev => prev.map(f =>
                 f.uid === file.uid ? { ...f, status: 'uploading' } : f
@@ -416,6 +433,9 @@ const AIQA = () => {
             // 上传失败时从列表中移除该文件
             setFileList(prev => prev.filter(f => f.uid !== file.uid));
             message.error(`${file.name} 文件上传失败: ${(error as Error).message || '未知错误'}`);
+        } finally {
+            // 标记上传结束
+            setIsUploading(false);
         }
     };
 
@@ -483,6 +503,12 @@ const AIQA = () => {
     }
 
     const handleSendText = async (contentOverride?: string) => {
+
+        // 如果有文件正在上传，不允许发送
+        if (isUploading) {
+            message.warning('文件正在上传中，请稍候...');
+            return;
+        }
 
         const content = (contentOverride || textInput).trim();
         // loading 中或无输入时不触发
@@ -696,12 +722,12 @@ const AIQA = () => {
                                                 }}
                                                 placeholder="请输入指令..."
                                                 className={styles.textInput}
-                                                disabled={loading}
+                                                disabled={loading || isUploading}
                                                 rows={1}
                                             />
                                                 <button onClick={()=>{
                                                     handleSendText()
-                                                }} className={styles.sendButton} disabled={loading}>
+                                                }} className={styles.sendButton} disabled={loading || isUploading}>
                                                     <Send size={18} />
                                                 </button>
                                             </div>
