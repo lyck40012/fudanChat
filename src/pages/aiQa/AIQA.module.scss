@@ -581,7 +581,7 @@
         box-shadow: 0 4px 12px rgba(0, 123, 255, 0.15);
     }
     span { color: #007bff; }
-    
+
     &.recording .toolbarIconWrapper {
         background: #fee2e2;
         color: #ef4444;
@@ -589,6 +589,63 @@
         box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
     }
     &.recording span { color: #ef4444; }
+  }
+}
+
+/* 新建对话按钮 */
+.newConversationButton {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  transition: all 0.2s;
+
+  .toolbarIconWrapper {
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 14px;
+      background: #eff6ff;
+      color: #007bff;
+      transition: all 0.2s;
+
+      svg {
+        width: 20px;
+        height: 20px;
+      }
+  }
+
+  span {
+    font-size: 11px;
+    color: #007bff;
+    font-weight: 500;
+  }
+
+  &:hover {
+    .toolbarIconWrapper {
+        background: #dbeafe;
+        color: #0056b3;
+        transform: scale(1.05);
+    }
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    .toolbarIconWrapper {
+      background: #f1f5f9;
+      color: #cbd5e1;
+      transform: none;
+    }
+    span { color: #cbd5e1; }
   }
 }
 
@@ -676,7 +733,7 @@
     color: #64748b;
     transition: all 0.2s;
   }
-  
+
   span {
     font-size: 11px;
     color: #64748b;

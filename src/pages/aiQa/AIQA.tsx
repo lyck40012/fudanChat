@@ -1,6 +1,6 @@
 import React, {useState, useRef, useEffect} from 'react';
 import {useNavigate, useLocation} from 'react-router-dom';
-import {Home, Mic, Camera, Keyboard, User, Bot, Send, StopCircle, Volume1, Volume2, FileUp} from 'lucide-react';
+import {Home, Mic, Camera, Keyboard, User, Bot, Send, StopCircle, Volume1, Volume2, FileUp, MessageSquarePlus} from 'lucide-react';
 import {message, Upload, Image, Typography, Slider} from 'antd';
 import {CloseCircleFilled, FileTextOutlined} from '@ant-design/icons';
 import type {UploadFile, UploadProps} from 'antd';
@@ -70,7 +70,8 @@ const AIQA = () => {
         loading,
         error,
         start,
-        stop
+        stop,
+        reset
     } = useChatSSE({
         url: `${import.meta.env.VITE_API_BASE_URL}/v3/chat`,
     })
@@ -506,6 +507,27 @@ const AIQA = () => {
         }
     }
 
+    // 新建对话
+    const handleNewConversation = () => {
+        // 停止音频播放
+        stopAudio();
+        // 停止语音识别
+        if (clientRef.current && voiceStatus === 'recording') {
+            clientRef.current.stop();
+            setVoiceStatus('idle');
+        }
+        // 清空文件列表
+        setFileList([]);
+        // 清空文本输入
+        setTextInput('');
+        // 清空识别结果
+        recognizeResult.current = {} as Message;
+        // 重置已播报消息ID
+        setSpokenMessageId(null);
+        // 清空对话历史
+        reset();
+    };
+
     const handleSendText = async (contentOverride?: string) => {
 
         // 如果有文件正在上传，不允许发送
@@ -790,6 +812,17 @@ const AIQA = () => {
                                 </button>
 
                                 <div className={styles.toolbarButtons}>
+                                    <button
+                                        onClick={handleNewConversation}
+                                        className={styles.newConversationButton}
+                                        disabled={loading}
+                                    >
+                                        <div className={styles.toolbarIconWrapper}>
+                                            <MessageSquarePlus/>
+                                        </div>
+                                        <span>新对话</span>
+                                    </button>
+
                                     <button
                                         onMouseDown={startRecording}
                                         onMouseUp={stopRecording}

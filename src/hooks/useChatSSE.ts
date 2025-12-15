@@ -191,11 +191,25 @@ export function useChatSSE({url, headers = {}}) {
         setLoading(false)
     }, [])
 
+    // 清空对话历史，开始新对话
+    const reset = useCallback(() => {
+        controllerRef.current?.abort()
+        setMessages([])
+        setLoading(false)
+        setError(null)
+        isConversationRef.current = false
+        conversationIdRef.current = ''
+        assistantIdRef.current = null
+        chatIdRef.current = null
+        // 注意：不重置 userIdRef，保持用户 ID 一致
+    }, [])
+
     return {
         messages,
         loading,
         error,
         start,
-        stop
+        stop,
+        reset
     }
 }
