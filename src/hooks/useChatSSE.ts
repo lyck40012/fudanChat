@@ -1,4 +1,15 @@
 import {useCallback, useRef, useState} from 'react'
+const formatDateTime = () => {
+    const now = new Date();
+    const pad = (num) => String(num).padStart(2, '0');
+    const yyyy = now.getFullYear();
+    const MM = pad(now.getMonth() + 1);
+    const dd = pad(now.getDate());
+    const HH = pad(now.getHours());
+    const mm = pad(now.getMinutes());
+    const ss = pad(now.getSeconds());
+    return `${yyyy}${MM}${dd}_${HH}${mm}${ss}`;
+};
 
 export function useChatSSE({url, headers = {}}) {
     const [messages, setMessages] = useState<any[]>([])
@@ -9,6 +20,7 @@ export function useChatSSE({url, headers = {}}) {
     const controllerRef = useRef<AbortController | null>(null)
     const assistantIdRef = useRef<string | null>(null)
     const chatIdRef = useRef<string | null>(null)
+    const userIdRef = useRef<number | null>(null)
 
     const start = useCallback(async (userMessage) => {
         controllerRef.current?.abort()
@@ -65,6 +77,7 @@ export function useChatSSE({url, headers = {}}) {
         }
 
         const requestUrl =  `${url}?conversation_id=${conversationIdRef.current}`
+        userIdRef.current = userIdRef.current || formatDateTime()
         try {
             const response = await fetch(requestUrl, {
                 method: 'POST',
@@ -75,13 +88,13 @@ export function useChatSSE({url, headers = {}}) {
                 },
                 body: JSON.stringify({
                     bot_id: "7574375637029273609",
-                    user_id: "123456789",
+                    user_id:userIdRef.current,
                     stream: true,
                     auto_save_history: true,
                     parameters: {
                         user: [
                             {
-                                user_id: "123456",
+                                user_id: userIdRef.current,
                                 user_name: "user"
                             }
                         ]

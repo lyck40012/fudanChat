@@ -1,7 +1,7 @@
 
-  # 复旦AI
+  # 镜观智能体
 
-  This is a code bundle for 复旦AI. The original project is available at https://www.figma.com/design/RCVTPvEdqBYuzMHvNymdTb/%E5%A4%8D%E6%97%A6AI.
+  This is a code bundle for 镜观智能体. The original project is available at https://www.figma.com/design/RCVTPvEdqBYuzMHvNymdTb/%E5%A4%8D%E6%97%A6AI.
 
   ## Running the code
 

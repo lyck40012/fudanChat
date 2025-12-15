@@ -324,7 +324,7 @@ const AIQA = () => {
 
     const stopRecording = async () => {
         if (currentMode !== 'voice' || voiceStatus !== 'recording'){
-            message.error('111111111111111')
+
             return
         };
         // 如果有文件正在上传，不允许发送
