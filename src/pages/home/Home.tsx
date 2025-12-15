@@ -53,7 +53,9 @@ export function Home() {
           <div className={styles.secondaryCards}>
             {/* 上传报告卡片 */}
             <button
-              onClick={() => navigate('/ai-qa')}
+              onClick={()=>{
+                  handlePresetClick('你好')
+              }}
               className={`${styles.card} ${styles.cardPrimary}`}
             >
               <div className={styles.cardBorder}></div>
@@ -64,7 +66,9 @@ export function Home() {
 
             {/* 随便问问卡片 */}
             <button
-              onClick={() => navigate('/ai-qa')}
+              onClick={()=>{
+                  handlePresetClick('你好')
+              }}
               className={`${styles.card} ${styles.cardSecondary}`}
             >
               <div className={styles.cardBorder}></div>
