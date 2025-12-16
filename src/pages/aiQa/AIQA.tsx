@@ -317,7 +317,21 @@ const AIQA = () => {
         }
         // 正在生成回答时不允许再次录音
         if (loading) return;
-        if (currentMode !== 'voice') return;
+
+        // 自动切换到语音模式并初始化客户端
+        if (currentMode !== 'voice') {
+            try {
+                if (!clientRef.current) {
+                    initClient();
+                }
+                setCurrentMode('voice');
+            } catch (error) {
+                console.error(error);
+                message.error((error as Error).message || '语音初始化失败');
+                return;
+            }
+        }
+
         pressStartTimeRef.current = Date.now();
         clientRef.current.start()
         setVoiceStatus('recording');
@@ -831,7 +845,6 @@ const AIQA = () => {
                                         onMouseLeave={() => voiceStatus === 'recording' && stopRecording()}
                                         onTouchStart={startRecording}
                                         onTouchEnd={stopRecording}
-                                        onClick={() => switchMode('voice')}
                                         className={getToolbarButtonClasses('voice')}
                                     >
                                         <div className={getToolbarIconWrapperClasses('voice')}>
