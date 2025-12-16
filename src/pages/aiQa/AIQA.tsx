@@ -698,24 +698,8 @@ const AIQA = () => {
                                 </div>
 
                                 <div className={styles.statusBar}>
-                                    {voiceStatus === 'recording' && (
-                                        <div className={`${styles.statusIndicator} ${styles.recordingIndicator}`}>
-                                            <div className={styles.dot}></div>
-                                            <span>正在录制音频流...</span>
-                                        </div>
-                                    )}
-                                    {voiceStatus === 'processing' && (
-                                        <div className={`${styles.statusIndicator} ${styles.processingIndicator}`}>
-                                            <div className={styles.dots}>
-                                                <div className={styles.dot}></div>
-                                                <div className={styles.dot}></div>
-                                                <div className={styles.dot}></div>
-                                            </div>
-                                            <span>正在分析波形...</span>
-                                        </div>
-                                    )}
-                                    {currentMode === 'text' && voiceStatus === 'idle' && (
-                                        <div className={styles.textInputWrapper}>
+                                    {voiceStatus === 'idle' && (
+                                        <>
                                             {/* 文件列表显示区域 */}
                                             {fileList.length > 0 && (
                                                 <div className={styles.fileListContainer}>
@@ -751,32 +735,78 @@ const AIQA = () => {
                                                 </div>
                                             )}
 
-                                            {/* 输入框区域 */}
-                                            <div className={styles.textInputContainer}>
-                                            <textarea
-                                                value={textInput}
-                                                onChange={(e) => setTextInput(e.target.value)}
-                                                onKeyDown={(e) => {
-                                                    if (e.key === 'Enter' && !e.shiftKey) {
-                                                        e.preventDefault();
-                                                        handleSendText();
-                                                    }
-                                                }}
-                                                placeholder="请输入指令..."
-                                                className={styles.textInput}
-                                                disabled={loading || isUploading}
-                                                rows={1}
-                                            />
-                                                <button onClick={()=>{
-                                                    handleSendText()
-                                                }} className={styles.sendButton} disabled={loading || isUploading}>
-                                                    <Send size={18} />
-                                                </button>
+                                            {/* 输入区域 */}
+                                            <div className={styles.textInputWrapper}>
+                                                <div className={styles.textInputContainer}>
+                                                    {/* 语音模式显示语音提示 */}
+                                                    {currentMode === 'voice' ? (
+                                                        <div
+                                                            className={`${styles.voicePrompt} ${voiceStatus === 'recording' ? styles.recording : ''}`}
+                                                            onMouseDown={startRecording}
+                                                            onMouseUp={stopRecording}
+                                                            onMouseLeave={() => voiceStatus === 'recording' && stopRecording()}
+                                                            onTouchStart={startRecording}
+                                                            onTouchEnd={stopRecording}
+                                                        >
+                                                            <Mic className={styles.voiceIcon} size={20} />
+                                                            <span className={styles.voiceText}>
+                                                                长按此处开始说话
+                                                            </span>
+                                                        </div>
+                                                    ) : (
+                                                        /* 文本模式显示输入框 */
+                                                        <textarea
+                                                            value={textInput}
+                                                            onChange={(e) => setTextInput(e.target.value)}
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === 'Enter' && !e.shiftKey) {
+                                                                    e.preventDefault();
+                                                                    handleSendText();
+                                                                }
+                                                            }}
+                                                            placeholder="请输入指令..."
+                                                            className={styles.textInput}
+                                                            disabled={loading || isUploading}
+                                                            rows={1}
+                                                        />
+                                                    )}
+
+                                                    {/* 根据模式显示不同的按钮 */}
+                                                    {currentMode === 'voice' ? (
+                                                        /* 语音模式：显示键盘按钮切换回文本 */
+                                                        <button
+                                                            onClick={() => switchMode('text')}
+                                                            className={styles.inputModeButton}
+                                                            title="切换到键盘模式"
+                                                        >
+                                                            <Keyboard size={18} />
+                                                        </button>
+                                                    ) : (
+                                                        /* 文本模式：显示麦克风按钮切换到语音 */
+                                                        <button
+                                                            onClick={() => switchMode('voice')}
+                                                            className={styles.inputModeButton}
+                                                            title="切换到语音模式"
+                                                        >
+                                                            <Mic size={18} />
+                                                        </button>
+                                                    )}
+
+                                                    <button
+                                                        onClick={() => handleSendText()}
+                                                        className={styles.sendButton}
+                                                        disabled={loading || isUploading || currentMode === 'voice'}
+                                                    >
+                                                        <Send size={18} />
+                                                    </button>
+                                                </div>
                                             </div>
-                                        </div>
+                                        </>
                                     )}
-                                    {voiceStatus === 'idle' && currentMode !== 'text' && (
-                                        <div className={styles.idleText}>
+
+                                    {/* 录音中显示 */}
+                                    {voiceStatus === 'recording' && (
+                                        <>
                                             {/* 文件列表显示区域 */}
                                             {fileList.length > 0 && (
                                                 <div className={styles.fileListContainer}>
@@ -811,12 +841,110 @@ const AIQA = () => {
                                                     ))}
                                                 </div>
                                             )}
-                                            <p>
-                                                {currentMode === 'voice' && '长按录入语音数据'}
-                                                {currentMode === 'file' && '文件上传就绪'}
-                                                {currentMode === 'camera' && '视觉输入就绪'}
-                                            </p>
-                                        </div>
+
+                                            {/* 输入区域 */}
+                                            <div className={styles.textInputWrapper}>
+                                                <div className={styles.textInputContainer}>
+                                                    <div
+                                                        className={`${styles.voicePrompt} ${styles.recording}`}
+                                                        onMouseDown={startRecording}
+                                                        onMouseUp={stopRecording}
+                                                        onMouseLeave={() => voiceStatus === 'recording' && stopRecording()}
+                                                        onTouchStart={startRecording}
+                                                        onTouchEnd={stopRecording}
+                                                    >
+                                                        <Mic className={styles.voiceIcon} size={20} />
+                                                        <span className={styles.voiceText}>
+                                                            正在录音...松开发送
+                                                        </span>
+                                                    </div>
+
+                                                    <button
+                                                        onClick={() => switchMode('text')}
+                                                        className={styles.inputModeButton}
+                                                        title="切换到键盘模式"
+                                                    >
+                                                        <Keyboard size={18} />
+                                                    </button>
+
+                                                    <button
+                                                        onClick={() => handleSendText()}
+                                                        className={styles.sendButton}
+                                                        disabled={loading || isUploading || currentMode === 'voice'}
+                                                    >
+                                                        <Send size={18} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </>
+                                    )}
+
+                                    {/* 处理中显示 */}
+                                    {voiceStatus === 'processing' && (
+                                        <>
+                                            {/* 文件列表显示区域 */}
+                                            {fileList.length > 0 && (
+                                                <div className={styles.fileListContainer}>
+                                                    {fileList.map((file) => (
+                                                        <div key={file.uid} className={styles.fileItem}>
+                                                            {isImageFile(file) ? (
+                                                                <Image
+                                                                    width={32}
+                                                                    height={32}
+                                                                    src={getFilePreviewUrl(file)}
+                                                                    alt={file.name}
+                                                                    style={{ borderRadius: '2px', objectFit: 'cover' }}
+                                                                    preview={{
+                                                                        mask: '预览'
+                                                                    }}
+                                                                />
+                                                            ) : (
+                                                                <div className={styles.filePreview}>
+                                                                    <FileTextOutlined className={styles.fileIcon} />
+                                                                </div>
+                                                            )}
+                                                            <div className={styles.fileInfo}>
+                                                                <Text className={styles.fileName} ellipsis={{ tooltip: file.name }}>
+                                                                    {file.name}
+                                                                </Text>
+                                                            </div>
+                                                            <CloseCircleFilled
+                                                                className={styles.removeFileButton}
+                                                                onClick={() => handleRemoveFile(file)}
+                                                            />
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {/* 输入区域 */}
+                                            <div className={styles.textInputWrapper}>
+                                                <div className={styles.textInputContainer}>
+                                                    <div className={`${styles.voicePrompt} ${styles.processing}`}>
+                                                        <Mic className={styles.voiceIcon} size={20} />
+                                                        <span className={styles.voiceText}>
+                                                            正在处理...
+                                                        </span>
+                                                    </div>
+
+                                                    <button
+                                                        onClick={() => switchMode('text')}
+                                                        className={styles.inputModeButton}
+                                                        title="切换到键盘模式"
+                                                    >
+                                                        <Keyboard size={18} />
+                                                    </button>
+
+                                                    <button
+                                                        onClick={() => handleSendText()}
+                                                        className={styles.sendButton}
+                                                        disabled={loading || isUploading || currentMode === 'voice'}
+                                                    >
+                                                        <Send size={18} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </>
                                     )}
                                 </div>
                             </div>
@@ -839,20 +967,6 @@ const AIQA = () => {
                                         <span>新对话</span>
                                     </button>
 
-                                    <button
-                                        onMouseDown={startRecording}
-                                        onMouseUp={stopRecording}
-                                        onMouseLeave={() => voiceStatus === 'recording' && stopRecording()}
-                                        onTouchStart={startRecording}
-                                        onTouchEnd={stopRecording}
-                                        className={getToolbarButtonClasses('voice')}
-                                    >
-                                        <div className={getToolbarIconWrapperClasses('voice')}>
-                                            <Mic/>
-                                        </div>
-                                        <span>语音</span>
-                                    </button>
-
                                     <Upload {...uploadProps} style={{ width: '100%' }}>
                                         <button
                                             onClick={()=>{
@@ -872,13 +986,6 @@ const AIQA = () => {
                                             <Camera/>
                                         </div>
                                         <span>拍摄</span>
-                                    </button>
-
-                                    <button onClick={() => switchMode('text')} className={getToolbarButtonClasses('text')}>
-                                        <div className={styles.toolbarIconWrapper}>
-                                            <Keyboard/>
-                                        </div>
-                                        <span>输入</span>
                                     </button>
 
                                     <button
