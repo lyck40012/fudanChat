@@ -51,10 +51,36 @@ export function Home() {
 
           {/* 次要功能卡片区 */}
           <div className={styles.secondaryCards}>
+
+
+              {/* 随便问问卡片 */}
+              <button
+                  onClick={()=>{
+                      navigate('/ai-qa', {
+                        state: {
+                          initialQuestion: '你好',
+                          botId: '7574375637029273609'
+                        }
+                      });
+                  }}
+                  className={`${styles.card} ${styles.cardSecondary}`}
+              >
+                  <div className={styles.cardBorder}></div>
+                  <MessageOutlined className={styles.cardIcon} />
+                  <span className={styles.cardText}>已预约医生，点击预问诊</span>
+                  <div className={styles.cardArrow}>→</div>
+              </button>
+
+
             {/* 上传报告卡片 */}
             <button
               onClick={()=>{
-                  handlePresetClick('你好')
+                  navigate('/ai-qa', {
+                    state: {
+                      initialQuestion: '你好',
+                      botId: '7574343526331547690'
+                    }
+                  });
               }}
               className={`${styles.card} ${styles.cardPrimary}`}
             >
@@ -64,18 +90,6 @@ export function Home() {
               <div className={styles.cardArrow}>→</div>
             </button>
 
-            {/* 随便问问卡片 */}
-            <button
-              onClick={()=>{
-                  handlePresetClick('你好')
-              }}
-              className={`${styles.card} ${styles.cardSecondary}`}
-            >
-              <div className={styles.cardBorder}></div>
-              <MessageOutlined className={styles.cardIcon} />
-              <span className={styles.cardText}>没有报告,随便问问!</span>
-              <div className={styles.cardArrow}>→</div>
-            </button>
           </div>
 
           {/* 预设问题区 */}

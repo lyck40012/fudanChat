@@ -14,7 +14,7 @@ import {
     WsTranscriptionClient
 } from "@coze/api/ws-tools";
 
-import {CommonErrorEvent, TranscriptionsMessageUpdateEvent, WebsocketsEventType, CozeAPI} from "@coze/api";
+import { WebsocketsEventType, CozeAPI} from "@coze/api";
 import { useChatSSE } from '../../hooks/useChatSSE'
 import { CameraCaptureModal } from './CameraCaptureModal'
 type InputMode = 'voice' | 'file' | 'camera' | 'text';
@@ -38,6 +38,9 @@ const renderMarkdown: any = (content) => {
 const AIQA = () => {
     const navigate = useNavigate();
     const location = useLocation();
+
+    // 从路由获取 botId，默认使用预问诊的 botId
+    const botIdFromRoute = (location.state as { botId?: string })?.botId || '7574375637029273609';
 
     // 创建 Coze API 客户端实例
     const cozeClient = useRef(new CozeAPI({
@@ -80,6 +83,7 @@ const AIQA = () => {
         reset
     } = useChatSSE({
         url: `${import.meta.env.VITE_API_BASE_URL}/v3/chat`,
+        botId: botIdFromRoute,
     })
     useEffect(() => {
         //获取权限

@@ -11,7 +11,7 @@ const formatDateTime = () => {
     return `${yyyy}${MM}${dd}_${HH}${mm}${ss}`;
 };
 
-export function useChatSSE({url, headers = {}}) {
+export function useChatSSE({url, headers = {}, botId = '7574375637029273609'}) {
     const [messages, setMessages] = useState<any[]>([])
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
@@ -87,7 +87,7 @@ export function useChatSSE({url, headers = {}}) {
                     ...headers
                 },
                 body: JSON.stringify({
-                    bot_id: "7574375637029273609",
+                    bot_id: botId,
                     user_id:userIdRef.current,
                     stream: true,
                     auto_save_history: true,
