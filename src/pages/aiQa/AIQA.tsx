@@ -65,6 +65,12 @@ const AIQA = () => {
     const [isAudioPlaying, setIsAudioPlaying] = useState(false);
     const [audioVolume, setAudioVolume] = useState<number>(80);
     const [isUploading, setIsUploading] = useState(false); // 是否有文件正在上传
+    // 触摸手势相关状态
+    const [showMask, setShowMask] = useState(false); // 是否显示遮罩层
+    const [touchStartY, setTouchStartY] = useState<number>(0); // 触摸起始Y坐标
+    const [currentTouchY, setCurrentTouchY] = useState<number>(0); // 当前触摸Y坐标
+    const [isCanceling, setIsCanceling] = useState(false); // 是否在取消区域
+    const [isMouseDown, setIsMouseDown] = useState(false); // 鼠标是否按下
     const {
         messages,
         loading,
@@ -342,22 +348,23 @@ const AIQA = () => {
 
             return
         };
+
+        // 立即重置UI状态，让用户看到已停止录音
+        setVoiceStatus('idle');
+
         // 如果有文件正在上传，不允许发送
         if (isUploading) {
             message.warning('文件正在上传中，请稍候...');
-            setVoiceStatus('idle');
             return;
         }
         const pressDuration = pressStartTimeRef.current ? Date.now() - pressStartTimeRef.current : 0;
         pressStartTimeRef.current = null;
 
         if(!recognizeResult?.current?.content&&!fileList.length){
-            setVoiceStatus('idle');
             clientRef?.current?.stop()
             return;
         }
         if (pressDuration < 500) {
-            setVoiceStatus('idle');
             clientRef?.current?.stop()
             message.warning('时间过短');
             return;
@@ -370,17 +377,220 @@ const AIQA = () => {
                     imageUrls: fileList.length > 0 ? fileList : undefined
                 };
                 start(messageWithImages)
-                // 发送后清空文件列表
+                // 发送后清空文件列表和识别结果
                 setFileList([]);
+                recognizeResult.current = {}
             },1000)
             // 将上传的图片附加到语音识别结果中
 
         } catch (error) {
             console.error('调用chat接口失败:', error);
             message.error('请求失败');
+            // 发生错误时也要清空
+            recognizeResult.current = {}
         }
-        recognizeResult.current = {}
+    };
+
+    // 触摸手势处理函数
+    const handleVoiceTouchStart = (e: React.TouchEvent) => {
+        e.preventDefault();
+        const touch = e.touches[0];
+        setTouchStartY(touch.clientY);
+        setCurrentTouchY(touch.clientY);
+        setShowMask(true);
+        setIsCanceling(false);
+        startRecording();
+    };
+
+    const handleVoiceTouchMove = (e: React.TouchEvent) => {
+        e.preventDefault();
+        const touch = e.touches[0];
+        setCurrentTouchY(touch.clientY);
+
+        // 计算滑动距离，向上滑动为负值
+        const distance = touchStartY - touch.clientY;
+        // 如果向上滑动超过100px，则进入取消区域
+        const CANCEL_THRESHOLD = 100;
+        setIsCanceling(distance > CANCEL_THRESHOLD);
+    };
+
+    const handleVoiceTouchEnd = (e: React.TouchEvent) => {
+        e.preventDefault();
+        setShowMask(false);
+        setIsMouseDown(false);
+
+        // 立即重置录音状态到 idle，让UI马上恢复
         setVoiceStatus('idle');
+
+        // 如果在取消区域，则取消发送
+        if (isCanceling) {
+            // 取消录音
+            if (clientRef.current) {
+                try {
+                    clientRef.current.stop();
+                } catch (err) {
+                    console.error('停止录音失败', err);
+                }
+            }
+            recognizeResult.current = {} as Message;
+            message.info('已取消发送');
+            setIsCanceling(false);
+        } else {
+            // 否则触发发送
+            const pressDuration = pressStartTimeRef.current ? Date.now() - pressStartTimeRef.current : 0;
+            pressStartTimeRef.current = null;
+
+            if(!recognizeResult?.current?.content && !fileList.length){
+                if (clientRef.current) {
+                    try {
+                        clientRef.current.stop();
+                    } catch (err) {
+                        console.error('停止录音失败', err);
+                    }
+                }
+            } else if (pressDuration < 500) {
+                if (clientRef.current) {
+                    try {
+                        clientRef.current.stop();
+                    } catch (err) {
+                        console.error('停止录音失败', err);
+                    }
+                }
+                message.warning('时间过短');
+            } else if (!isUploading) {
+                // 正常发送
+                setTimeout(()=>{
+                    if (clientRef.current) {
+                        try {
+                            clientRef.current.stop();
+                        } catch (err) {
+                            console.error('停止录音失败', err);
+                        }
+                    }
+                    const messageWithImages = {
+                        ...(recognizeResult?.current ||{}),
+                        imageUrls: fileList.length > 0 ? fileList : undefined
+                    };
+                    start(messageWithImages);
+                    // 发送后清空文件列表和识别结果
+                    setFileList([]);
+                    recognizeResult.current = {};
+                }, 1000);
+            } else {
+                message.warning('文件正在上传中，请稍候...');
+            }
+        }
+
+        setTouchStartY(0);
+        setCurrentTouchY(0);
+    };
+
+    // 鼠标手势处理函数
+    const handleVoiceMouseDown = (e: React.MouseEvent) => {
+        e.preventDefault();
+        setIsMouseDown(true);
+        setTouchStartY(e.clientY);
+        setCurrentTouchY(e.clientY);
+        setShowMask(true);
+        setIsCanceling(false);
+        startRecording();
+
+        // 保存起始位置，用于计算距离
+        const startY = e.clientY;
+        let currentCanceling = false;
+
+        // 在 document 上添加事件监听，这样即使鼠标移出元素也能监听到
+        const handleDocumentMouseMove = (e: MouseEvent) => {
+            e.preventDefault();
+            setCurrentTouchY(e.clientY);
+
+            // 计算滑动距离，向上滑动为负值
+            const dist = startY - e.clientY;
+            // 如果向上滑动超过100px，则进入取消区域
+            const CANCEL_THRESHOLD = 100;
+            currentCanceling = dist > CANCEL_THRESHOLD;
+            setIsCanceling(currentCanceling);
+        };
+
+        const handleDocumentMouseUp = (e: MouseEvent) => {
+            e.preventDefault();
+            setIsMouseDown(false);
+            setShowMask(false);
+
+            // 移除 document 事件监听
+            document.removeEventListener('mousemove', handleDocumentMouseMove);
+            document.removeEventListener('mouseup', handleDocumentMouseUp);
+
+            // 立即重置录音状态到 idle，让UI马上恢复
+            setVoiceStatus('idle');
+
+            // 如果在取消区域，则取消发送
+            if (currentCanceling) {
+                // 取消录音
+                if (clientRef.current) {
+                    try {
+                        clientRef.current.stop();
+                    } catch (err) {
+                        console.error('停止录音失败', err);
+                    }
+                }
+                recognizeResult.current = {} as Message;
+                message.info('已取消发送');
+                setIsCanceling(false);
+            } else {
+                // 否则触发发送（此时状态已经是 idle，stopRecording 内部检查需要调整）
+                // 直接处理发送逻辑
+                const pressDuration = pressStartTimeRef.current ? Date.now() - pressStartTimeRef.current : 0;
+                pressStartTimeRef.current = null;
+
+                if(!recognizeResult?.current?.content && !fileList.length){
+                    if (clientRef.current) {
+                        try {
+                            clientRef.current.stop();
+                        } catch (err) {
+                            console.error('停止录音失败', err);
+                        }
+                    }
+                } else if (pressDuration < 500) {
+                    if (clientRef.current) {
+                        try {
+                            clientRef.current.stop();
+                        } catch (err) {
+                            console.error('停止录音失败', err);
+                        }
+                    }
+                    message.warning('时间过短');
+                } else if (!isUploading) {
+                    // 正常发送
+                    setTimeout(()=>{
+                        if (clientRef.current) {
+                            try {
+                                clientRef.current.stop();
+                            } catch (err) {
+                                console.error('停止录音失败', err);
+                            }
+                        }
+                        const messageWithImages = {
+                            ...(recognizeResult?.current ||{}),
+                            imageUrls: fileList.length > 0 ? fileList : undefined
+                        };
+                        start(messageWithImages);
+                        // 发送后清空文件列表和识别结果
+                        setFileList([]);
+                        recognizeResult.current = {};
+                    }, 1000);
+                } else {
+                    message.warning('文件正在上传中，请稍候...');
+                }
+            }
+
+            setTouchStartY(0);
+            setCurrentTouchY(0);
+        };
+
+        // 添加 document 事件监听
+        document.addEventListener('mousemove', handleDocumentMouseMove);
+        document.addEventListener('mouseup', handleDocumentMouseUp);
     };
 
     const openCamera = () => {
@@ -614,17 +824,25 @@ const AIQA = () => {
         }
         return classNames.join(' ');
     };
-
-    const getToolbarIconWrapperClasses = (mode: InputMode) => {
-        const classNames = [styles.toolbarIconWrapper];
-        if (mode === 'voice' && voiceStatus === 'recording') {
-            classNames.push(styles.recording);
-        }
-        return classNames.join(' ');
-    };
-
     return (
         <>
+            {/* 全屏语音遮罩层 */}
+            {showMask && (
+                <div className={styles.voiceMask}>
+                    <div className={styles.maskContent}>
+                        <div className={styles.maskIcon}>
+                            <Mic size={60} />
+                        </div>
+                        <div className={styles.maskText}>
+                            {isCanceling ? '松开，取消发送' : '上划取消'}
+                        </div>
+                        <div className={styles.maskHint}>
+                            {isCanceling ? '' : '松开，发送消息'}
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className={styles.container}>
                 <div className={styles.phone}>
                     {/* Corner Decorations */}
@@ -742,11 +960,10 @@ const AIQA = () => {
                                                     {currentMode === 'voice' ? (
                                                         <div
                                                             className={`${styles.voicePrompt} ${voiceStatus === 'recording' ? styles.recording : ''}`}
-                                                            onMouseDown={startRecording}
-                                                            onMouseUp={stopRecording}
-                                                            onMouseLeave={() => voiceStatus === 'recording' && stopRecording()}
-                                                            onTouchStart={startRecording}
-                                                            onTouchEnd={stopRecording}
+                                                            onMouseDown={handleVoiceMouseDown}
+                                                            onTouchStart={handleVoiceTouchStart}
+                                                            onTouchMove={handleVoiceTouchMove}
+                                                            onTouchEnd={handleVoiceTouchEnd}
                                                         >
                                                             <Mic className={styles.voiceIcon} size={20} />
                                                             <span className={styles.voiceText}>
@@ -812,11 +1029,10 @@ const AIQA = () => {
                                                 <div className={styles.textInputContainer}>
                                                     <div
                                                         className={`${styles.voicePrompt} ${styles.recording}`}
-                                                        onMouseDown={startRecording}
-                                                        onMouseUp={stopRecording}
-                                                        onMouseLeave={() => voiceStatus === 'recording' && stopRecording()}
-                                                        onTouchStart={startRecording}
-                                                        onTouchEnd={stopRecording}
+                                                        onMouseDown={handleVoiceMouseDown}
+                                                        onTouchStart={handleVoiceTouchStart}
+                                                        onTouchMove={handleVoiceTouchMove}
+                                                        onTouchEnd={handleVoiceTouchEnd}
                                                     >
                                                         <Mic className={styles.voiceIcon} size={20} />
                                                         <span className={styles.voiceText}>
