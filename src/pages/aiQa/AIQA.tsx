@@ -526,6 +526,8 @@ const AIQA = () => {
         setSpokenMessageId(null);
         // 清空对话历史
         reset();
+        // 自动发送"你好"
+        handleSendText('你好');
     };
 
     const handleSendText = async (contentOverride?: string) => {
