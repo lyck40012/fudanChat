@@ -698,43 +698,43 @@ const AIQA = () => {
                                 </div>
 
                                 <div className={styles.statusBar}>
+                                    {/* 文件列表显示区域 - 统一渲染，不重复 */}
+                                    {fileList.length > 0 && (
+                                        <div className={styles.fileListContainer}>
+                                            {fileList.map((file) => (
+                                                <div key={file.uid} className={styles.fileItem}>
+                                                    {isImageFile(file) ? (
+                                                        <Image
+                                                            width={32}
+                                                            height={32}
+                                                            src={getFilePreviewUrl(file)}
+                                                            alt={file.name}
+                                                            style={{ borderRadius: '2px', objectFit: 'cover' }}
+                                                            preview={{
+                                                                mask: '预览'
+                                                            }}
+                                                        />
+                                                    ) : (
+                                                        <div className={styles.filePreview}>
+                                                            <FileTextOutlined className={styles.fileIcon} />
+                                                        </div>
+                                                    )}
+                                                    <div className={styles.fileInfo}>
+                                                        <Text className={styles.fileName} ellipsis={{ tooltip: file.name }}>
+                                                            {file.name}
+                                                        </Text>
+                                                    </div>
+                                                    <CloseCircleFilled
+                                                        className={styles.removeFileButton}
+                                                        onClick={() => handleRemoveFile(file)}
+                                                    />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
                                     {voiceStatus === 'idle' && (
                                         <>
-                                            {/* 文件列表显示区域 */}
-                                            {fileList.length > 0 && (
-                                                <div className={styles.fileListContainer}>
-                                                    {fileList.map((file) => (
-                                                        <div key={file.uid} className={styles.fileItem}>
-                                                            {isImageFile(file) ? (
-                                                                <Image
-                                                                    width={32}
-                                                                    height={32}
-                                                                    src={getFilePreviewUrl(file)}
-                                                                    alt={file.name}
-                                                                    style={{ borderRadius: '2px', objectFit: 'cover' }}
-                                                                    preview={{
-                                                                        mask: '预览'
-                                                                    }}
-                                                                />
-                                                            ) : (
-                                                                <div className={styles.filePreview}>
-                                                                    <FileTextOutlined className={styles.fileIcon} />
-                                                                </div>
-                                                            )}
-                                                            <div className={styles.fileInfo}>
-                                                                <Text className={styles.fileName} ellipsis={{ tooltip: file.name }}>
-                                                                    {file.name}
-                                                                </Text>
-                                                            </div>
-                                                            <CloseCircleFilled
-                                                                className={styles.removeFileButton}
-                                                                onClick={() => handleRemoveFile(file)}
-                                                            />
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-
                                             {/* 输入区域 */}
                                             <div className={styles.textInputWrapper}>
                                                 <div className={styles.textInputContainer}>
@@ -807,41 +807,6 @@ const AIQA = () => {
                                     {/* 录音中显示 */}
                                     {voiceStatus === 'recording' && (
                                         <>
-                                            {/* 文件列表显示区域 */}
-                                            {fileList.length > 0 && (
-                                                <div className={styles.fileListContainer}>
-                                                    {fileList.map((file) => (
-                                                        <div key={file.uid} className={styles.fileItem}>
-                                                            {isImageFile(file) ? (
-                                                                <Image
-                                                                    width={32}
-                                                                    height={32}
-                                                                    src={getFilePreviewUrl(file)}
-                                                                    alt={file.name}
-                                                                    style={{ borderRadius: '2px', objectFit: 'cover' }}
-                                                                    preview={{
-                                                                        mask: '预览'
-                                                                    }}
-                                                                />
-                                                            ) : (
-                                                                <div className={styles.filePreview}>
-                                                                    <FileTextOutlined className={styles.fileIcon} />
-                                                                </div>
-                                                            )}
-                                                            <div className={styles.fileInfo}>
-                                                                <Text className={styles.fileName} ellipsis={{ tooltip: file.name }}>
-                                                                    {file.name}
-                                                                </Text>
-                                                            </div>
-                                                            <CloseCircleFilled
-                                                                className={styles.removeFileButton}
-                                                                onClick={() => handleRemoveFile(file)}
-                                                            />
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-
                                             {/* 输入区域 */}
                                             <div className={styles.textInputWrapper}>
                                                 <div className={styles.textInputContainer}>
@@ -882,41 +847,6 @@ const AIQA = () => {
                                     {/* 处理中显示 */}
                                     {voiceStatus === 'processing' && (
                                         <>
-                                            {/* 文件列表显示区域 */}
-                                            {fileList.length > 0 && (
-                                                <div className={styles.fileListContainer}>
-                                                    {fileList.map((file) => (
-                                                        <div key={file.uid} className={styles.fileItem}>
-                                                            {isImageFile(file) ? (
-                                                                <Image
-                                                                    width={32}
-                                                                    height={32}
-                                                                    src={getFilePreviewUrl(file)}
-                                                                    alt={file.name}
-                                                                    style={{ borderRadius: '2px', objectFit: 'cover' }}
-                                                                    preview={{
-                                                                        mask: '预览'
-                                                                    }}
-                                                                />
-                                                            ) : (
-                                                                <div className={styles.filePreview}>
-                                                                    <FileTextOutlined className={styles.fileIcon} />
-                                                                </div>
-                                                            )}
-                                                            <div className={styles.fileInfo}>
-                                                                <Text className={styles.fileName} ellipsis={{ tooltip: file.name }}>
-                                                                    {file.name}
-                                                                </Text>
-                                                            </div>
-                                                            <CloseCircleFilled
-                                                                className={styles.removeFileButton}
-                                                                onClick={() => handleRemoveFile(file)}
-                                                            />
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-
                                             {/* 输入区域 */}
                                             <div className={styles.textInputWrapper}>
                                                 <div className={styles.textInputContainer}>
