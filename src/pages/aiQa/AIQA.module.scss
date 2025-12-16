@@ -522,17 +522,13 @@
   justify-content: center;
   gap: 10px;
   padding: 10px 16px;
-  border: 1px solid #a0a1a1;
+  border: 1px solid #e3e3e3;
   border-radius: 12px;
   min-height: 44px;
   transition: all 0.3s ease;
   cursor: pointer;
   user-select: none;
-
-  &:hover {
-    background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
-    border-color: #0056b3;
-  }
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 
   &:active {
     transform: scale(0.98);
@@ -542,6 +538,7 @@
     background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
     border-color: #ef4444;
     border-style: solid;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
 
     .voiceIcon {
       color: #ef4444;
@@ -557,6 +554,7 @@
     background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
     border-style: solid;
     cursor: default;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
 
     .voiceIcon {
       color: #f59e0b;
