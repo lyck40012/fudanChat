@@ -17,6 +17,21 @@ import {
 import { WebsocketsEventType, CozeAPI} from "@coze/api";
 import { useChatSSE } from '../../hooks/useChatSSE'
 import { CameraCaptureModal } from './CameraCaptureModal'
+
+// 全局配置类型声明
+declare global {
+    interface Window {
+        APP_CONFIG?: {
+            voiceCallSilenceTimeout?: number;
+        };
+    }
+}
+
+// 获取语音通话静默检测时长（毫秒），默认 1000ms
+const getVoiceCallSilenceTimeout = () => {
+    return window.APP_CONFIG?.voiceCallSilenceTimeout ?? 1000;
+};
+
 type InputMode = 'voice' | 'file' | 'camera' | 'text';
 type VoiceStatus = 'idle' | 'recording' | 'processing';
 
@@ -447,11 +462,11 @@ const AIQA = () => {
         if (content && content !== lastContentRef.current) {
             lastContentRef.current = content;
 
-            // 设置新的静默检测定时器（1秒）
+            // 设置新的静默检测定时器（从全局配置读取时长）
             silenceTimerRef.current = setTimeout(() => {
-                // 1秒后如果没有新的内容更新，则自动发送
+                // N秒后如果没有新的内容更新，则自动发送
                 handleAutoSendInVoiceCall();
-            }, 1000);
+            }, getVoiceCallSilenceTimeout());
         }
     };
 

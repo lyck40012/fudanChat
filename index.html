@@ -1,15 +1,23 @@
 
-  <!DOCTYPE html>
-  <html lang="zh-CN">
-    <head>
-      <meta charset="UTF-8" />
-      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      <title>镜观智能体</title>
-    </head>
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>镜观智能体</title>
 
-    <body>
-      <div id="root"></div>
-      <script type="module" src="/src/main.tsx"></script>
-    </body>
-  </html>
-  
+    <!-- 全局配置 -->
+    <script>
+      window.APP_CONFIG = {
+        // 语音通话静默检测时长（毫秒）
+        // 用户停止说话后，等待多久自动发送消息
+        voiceCallSilenceTimeout: 1000
+      };
+    </script>
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
