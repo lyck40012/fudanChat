@@ -36,7 +36,7 @@ export function Home() {
           </div>
 
           {/* 主功能入口 - 语音通话和问答助手 */}
-          <div className={styles.mainActions}>
+  {/*        <div className={styles.mainActions}>
             <button
               onClick={() => navigate('/voice-call')}
               className={`${styles.mainButton} ${styles.mainButtonVoice}`}
@@ -47,7 +47,7 @@ export function Home() {
                 <p className={styles.mainButtonDesc}>实时语音对话 · 智能诊断</p>
               </div>
             </button>
-          </div>
+          </div>*/}
 
           {/* 次要功能卡片区 */}
           <div className={styles.secondaryCards}>
