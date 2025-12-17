@@ -69,6 +69,7 @@ const AIQA = () => {
     const [isAudioPlaying, setIsAudioPlaying] = useState(false);
     const [audioVolume, setAudioVolume] = useState<number>(80);
     const [isUploading, setIsUploading] = useState(false); // 是否有文件正在上传
+    const isUploadingRef = useRef(false); // 使用 ref 解决闭包问题
     // 触摸手势相关状态
     const [showMask, setShowMask] = useState(false); // 是否显示遮罩层
     const [touchStartY, setTouchStartY] = useState<number>(0); // 触摸起始Y坐标
@@ -175,6 +176,11 @@ const AIQA = () => {
     useEffect(() => {
         fileListRef.current = fileList;
     }, [fileList]);
+
+    // 同步 isUploading state 到 ref，解决语音通话中的闭包问题
+    useEffect(() => {
+        isUploadingRef.current = isUploading;
+    }, [isUploading]);
 
     useEffect(() => {
         stopAudio()
@@ -399,6 +405,7 @@ const AIQA = () => {
 
     // 停止语音通话
     const stopVoiceCall = () => {
+        stopAudio()
         // 清除静默定时器
         if (silenceTimerRef.current) {
             clearTimeout(silenceTimerRef.current);
@@ -425,6 +432,12 @@ const AIQA = () => {
 
     // 处理语音通话中的内容更新，触发静默检测
     const handleVoiceCallContentUpdate = (content: string) => {
+        // 如果图片正在上传，不触发静默检测
+        if (isUploadingRef.current) {
+            console.log('图片正在上传中，暂不触发自动发送');
+            return;
+        }
+
         // 清除之前的定时器
         if (silenceTimerRef.current) {
             clearTimeout(silenceTimerRef.current);
@@ -486,7 +499,6 @@ const AIQA = () => {
 
     const startRecording = () => {
         stopAudio()
-
         // 如果处于语音通话模式，不允许按住说话
         if (isVoiceCallActive) {
             message.warning('语音通话进行中，请先结束通话');
@@ -771,7 +783,6 @@ const AIQA = () => {
     };
 
     const openCamera = () => {
-        // setCurrentMode('camera');
         stopAudio()
         setCameraModalVisible(true);
     };
@@ -842,6 +853,12 @@ const AIQA = () => {
         } finally {
             // 标记上传结束
             setIsUploading(false);
+
+            // 图片上传完成后，如果处于语音通话模式且有待发送的内容，重新触发静默检测
+            if (isVoiceCallActiveRef.current && lastContentRef.current) {
+                console.log('图片上传完成，重新触发静默检测');
+                handleVoiceCallContentUpdate(lastContentRef.current);
+            }
         }
     };
 
