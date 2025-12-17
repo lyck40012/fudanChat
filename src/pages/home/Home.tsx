@@ -5,7 +5,7 @@ import {
   MessageOutlined,
   DoubleRightOutlined,
 } from "@ant-design/icons";
-
+import  Logo from "../../static/logo.png"
 // 首页组件：医疗智能体风格
 export function Home() {
   const navigate = useNavigate();
@@ -29,7 +29,7 @@ export function Home() {
           {/* 顶部品牌区 */}
           <div className={styles.header}>
             <div className={styles.logoCircle}>
-              <DoubleRightOutlined className={styles.logoIcon} />
+              <img src={Logo} className={styles.logoIcon} />
             </div>
             <h1 className={styles.title}>镜观智能体</h1>
             <p className={styles.subtitle}>消化内镜AI全流程辅助</p>
