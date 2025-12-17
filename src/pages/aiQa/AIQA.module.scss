@@ -565,6 +565,24 @@
       font-weight: 600;
     }
   }
+
+  &.calling {
+    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+    border-color: #16a34a;
+    border-style: solid;
+    cursor: default;
+    box-shadow: 0 4px 12px rgba(22, 163, 74, 0.2);
+    animation: pulse 1.5s infinite;
+
+    .voiceIcon {
+      color: #16a34a;
+    }
+
+    .voiceText {
+      color: #000000;
+      font-weight: 600;
+    }
+  }
 }
 
 .voiceIcon {
@@ -743,18 +761,87 @@
   }
 }
 
+/* 语音通话按钮 */
+.voiceCallButton {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  transition: all 0.2s;
+
+  .toolbarIconWrapper {
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 14px;
+      background: #f1f5f9;
+      color: #64748b;
+      transition: all 0.2s;
+
+      svg {
+        width: 20px;
+        height: 20px;
+      }
+  }
+
+  span {
+    font-size: 11px;
+    color: #64748b;
+    font-weight: 500;
+  }
+
+  &:hover {
+    .toolbarIconWrapper {
+        background: #dcfce7;
+        color: #16a34a;
+        transform: scale(1.05);
+    }
+    span { color: #16a34a; }
+  }
+
+  &.active {
+    .toolbarIconWrapper {
+        background: #fee2e2;
+        color: #ef4444;
+        animation: pulse 1.5s infinite;
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+    }
+    span { color: #ef4444; }
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    .toolbarIconWrapper {
+      background: #f1f5f9;
+      color: #cbd5e1;
+      transform: none;
+      animation: none;
+    }
+    span { color: #cbd5e1; }
+  }
+}
+
 .stopAudioToolbar {
   margin-top: auto;
-  
+
   .toolbarIconWrapper {
       background: #fee2e2;
       color: #ef4444;
   }
-  
+
   &:hover .toolbarIconWrapper {
       background: #fecaca;
   }
-  
+
   &:disabled {
     opacity: 0.3;
     cursor: not-allowed;

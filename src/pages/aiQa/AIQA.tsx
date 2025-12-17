@@ -1,6 +1,6 @@
 import React, {useState, useRef, useEffect} from 'react';
 import {useNavigate, useLocation} from 'react-router-dom';
-import {Home, Mic, Camera, Keyboard, User, Bot, Send, StopCircle, Volume1, Volume2, FileUp, MessageSquarePlus} from 'lucide-react';
+import {Home, Mic, Camera, Keyboard, User, Bot, Send, StopCircle, Volume1, Volume2, FileUp, MessageSquarePlus, Phone, PhoneOff} from 'lucide-react';
 import {message, Upload, Image, Typography, Slider} from 'antd';
 import {CloseCircleFilled, FileTextOutlined} from '@ant-design/icons';
 import type {UploadFile, UploadProps} from 'antd';
@@ -74,6 +74,11 @@ const AIQA = () => {
     const [currentTouchY, setCurrentTouchY] = useState<number>(0); // 当前触摸Y坐标
     const [isCanceling, setIsCanceling] = useState(false); // 是否在取消区域
     const [isMouseDown, setIsMouseDown] = useState(false); // 鼠标是否按下
+    // 语音通话相关状态
+    const [isVoiceCallActive, setIsVoiceCallActive] = useState(false); // 是否处于语音通话模式
+    const isVoiceCallActiveRef = useRef(false); // 使用 ref 解决闭包问题
+    const silenceTimerRef = useRef<NodeJS.Timeout | null>(null); // 静默检测定时器
+    const lastContentRef = useRef<string>(''); // 上次识别的内容，用于检测变化
     const {
         messages,
         loading,
@@ -144,11 +149,18 @@ const AIQA = () => {
             speechAbortRef.current.abort();
             speechAbortRef.current = null;
         }
+        // 清理语音通话的定时器
+        if (silenceTimerRef.current) {
+            clearTimeout(silenceTimerRef.current);
+            silenceTimerRef.current = null;
+        }
         pressStartTimeRef.current = null;
         setVoiceStatus('idle');
         recognizeResult.current = {}
         stop?.();
         setIsAudioPlaying(false);
+        setIsVoiceCallActive(false);
+        isVoiceCallActiveRef.current = false; // 同步更新 ref
     }, []);
 
     // 音量变化时同步到当前音频
@@ -238,6 +250,20 @@ const AIQA = () => {
         setSpokenMessageId(lastAi.id)
     }, [messages, loading, voiceId])
 
+    // 监听 loading 状态变化，在语音通话模式下 AI 回答完成后自动重新开始录音
+    useEffect(() => {
+        if (!loading && isVoiceCallActive) {
+            // AI 回答完成，重新开始录音
+            if (clientRef.current) {
+                try {
+                    clientRef.current.start();
+                } catch (err) {
+                    console.error('重新开始录音失败', err);
+                }
+            }
+        }
+    }, [loading, isVoiceCallActive])
+
     const checkRequirements = async () => {
         // 检查麦克风权限
         const permission = await WsToolsUtils.checkDevicePermission();
@@ -293,7 +319,12 @@ const AIQA = () => {
                     content: event.data.content,
                     content_type:'text'
                 };
-            recognizeResult.current =userMsg
+            recognizeResult.current =userMsg;
+            console.log(event, isVoiceCallActiveRef.current)
+            // 如果处于语音通话模式，触发静默检测
+            if (isVoiceCallActiveRef.current) {
+                handleVoiceCallContentUpdate(event.data.content);
+            }
             },
         );
 
@@ -318,8 +349,145 @@ const AIQA = () => {
     };
 
 
+    // 开始语音通话
+    const startVoiceCall = () => {
+        stopAudio();
+
+        // 如果有文件正在上传，不允许开始通话
+        if (isUploading) {
+            message.warning('文件正在上传中，请稍候...');
+            return;
+        }
+
+        // 正在生成回答时不允许开始通话
+        if (loading) {
+            message.warning('AI正在回答中，请稍候...');
+            return;
+        }
+
+        // 初始化语音客户端
+        try {
+            if (!clientRef.current) {
+                initClient();
+            }
+        } catch (error) {
+            console.error(error);
+            message.error((error as Error).message || '语音初始化失败');
+            return;
+        }
+
+        // 清空上次的识别内容
+        lastContentRef.current = '';
+        recognizeResult.current = {} as Message;
+
+        // 设置通话状态
+        setIsVoiceCallActive(true);
+        isVoiceCallActiveRef.current = true; // 同步更新 ref
+
+        // 开始录音（语音通话模式不改变 voiceStatus）
+        clientRef.current.start();
+
+        message.success('语音通话已开启，请开始说话');
+    };
+
+    // 停止语音通话
+    const stopVoiceCall = () => {
+        // 清除静默定时器
+        if (silenceTimerRef.current) {
+            clearTimeout(silenceTimerRef.current);
+            silenceTimerRef.current = null;
+        }
+
+        // 停止录音
+        if (clientRef.current) {
+            try {
+                clientRef.current.stop();
+            } catch (err) {
+                console.error('停止录音失败', err);
+            }
+        }
+
+        // 重置状态（不改变 voiceStatus 和 currentMode）
+        setIsVoiceCallActive(false);
+        isVoiceCallActiveRef.current = false; // 同步更新 ref
+        lastContentRef.current = '';
+        recognizeResult.current = {} as Message;
+
+        message.info('语音通话已结束');
+    };
+
+    // 处理语音通话中的内容更新，触发静默检测
+    const handleVoiceCallContentUpdate = (content: string) => {
+        // 清除之前的定时器
+        if (silenceTimerRef.current) {
+            clearTimeout(silenceTimerRef.current);
+            silenceTimerRef.current = null;
+        }
+        console.log(111111111)
+        // 如果内容有变化，说明用户还在说话
+        if (content && content !== lastContentRef.current) {
+            lastContentRef.current = content;
+
+            // 设置新的静默检测定时器（1秒）
+            silenceTimerRef.current = setTimeout(() => {
+                // 1秒后如果没有新的内容更新，则自动发送
+
+                handleAutoSendInVoiceCall();
+            }, 1000);
+        }
+    };
+
+    // 语音通话模式下的自动发送
+    const handleAutoSendInVoiceCall = async () => {
+        if (!isVoiceCallActiveRef.current) return;
+
+        // 检查是否有内容
+        const content = recognizeResult.current?.content?.trim();
+        if (!content) {
+            // 没有内容，重新开始录音
+            lastContentRef.current = '';
+            return;
+        }
+
+        // 停止当前录音
+        if (clientRef.current) {
+            try {
+                clientRef.current.stop();
+            } catch (err) {
+                console.error('停止录音失败', err);
+            }
+        }
+
+        // 发送消息
+        const messageToSend = {
+            ...recognizeResult.current,
+            imageUrls: fileList.length > 0 ? fileList : undefined
+        };
+
+        try {
+            await start(messageToSend);
+            // 发送后清空文件列表和识别结果
+            setFileList([]);
+            recognizeResult.current = {} as Message;
+            lastContentRef.current = '';
+
+            // 等待 AI 回答完成后，自动重新开始录音
+            // 这个逻辑会在 loading 状态变化时处理
+        } catch (error) {
+            console.error('自动发送失败:', error);
+            message.error('发送失败');
+        }
+    };
+
     const startRecording = () => {
         stopAudio()
+
+        // 如果处于语音通话模式，不允许按住说话
+        if (isVoiceCallActive) {
+            message.warning('语音通话进行中，请先结束通话');
+            return;
+        }
+
         // 如果有文件正在上传，不允许录音
         if (isUploading) {
             message.warning('文件正在上传中，请稍候...');
@@ -739,6 +907,10 @@ const AIQA = () => {
     const handleNewConversation = () => {
         // 停止音频播放
         stopAudio();
+        // 停止语音通话
+        if (isVoiceCallActive) {
+            stopVoiceCall();
+        }
         // 停止语音识别
         if (clientRef.current && voiceStatus === 'recording') {
             clientRef.current.stop();
@@ -865,10 +1037,11 @@ const AIQA = () => {
                             <div className={styles.chatArea}>
                                 <div className={styles.modeInfo}>
                                     <p>
-                                        {currentMode === 'voice' && '>>> 语音输入模式已激活'}
-                                        {currentMode === 'text' && '>>> 文字指令输入就绪'}
-                                        {currentMode === 'file' && '>>> 文件解析模块加载完毕'}
-                                        {currentMode === 'camera' && '>>> 视觉传感器已连接'}
+                                        {isVoiceCallActive && '>>> 语音通话进行中...'}
+                                        {!isVoiceCallActive && currentMode === 'voice' && '>>> 语音输入模式已激活'}
+                                        {!isVoiceCallActive && currentMode === 'text' && '>>> 文字指令输入就绪'}
+                                        {!isVoiceCallActive && currentMode === 'file' && '>>> 文件解析模块加载完毕'}
+                                        {!isVoiceCallActive && currentMode === 'camera' && '>>> 视觉传感器已连接'}
                                     </p>
                                 </div>
 
@@ -960,8 +1133,16 @@ const AIQA = () => {
                                             {/* 输入区域 */}
                                             <div className={styles.textInputWrapper}>
                                                 <div className={styles.textInputContainer}>
-                                                    {/* 语音模式显示语音提示 */}
-                                                    {currentMode === 'voice' ? (
+                                                    {/* 语音通话模式 */}
+                                                    {isVoiceCallActive ? (
+                                                        <div className={`${styles.voicePrompt} ${styles.calling}`}>
+                                                            <Phone className={styles.voiceIcon} size={20} />
+                                                            <span className={styles.voiceText}>
+                                                                {loading ? 'AI正在回答...' : '语音通话中...'}
+                                                            </span>
+                                                        </div>
+                                                    ) : currentMode === 'voice' ? (
+                                                        /* 按住说话模式 */
                                                         <div
                                                             className={`${styles.voicePrompt} ${voiceStatus === 'recording' ? styles.recording : ''}`}
                                                             onMouseDown={handleVoiceMouseDown}
@@ -993,40 +1174,44 @@ const AIQA = () => {
                                                     )}
 
                                                     {/* 根据模式显示不同的按钮 */}
-                                                    {currentMode === 'voice' ? (
-                                                        /* 语音模式：显示键盘按钮切换回文本 */
-                                                        <button
-                                                            onClick={() => switchMode('text')}
-                                                            className={styles.inputModeButton}
-                                                            title="切换到键盘模式"
-                                                        >
-                                                            <Keyboard size={18} />
-                                                        </button>
-                                                    ) : (
-                                                        /* 文本模式：显示麦克风按钮切换到语音 */
-                                                        <button
-                                                            onClick={() => switchMode('voice')}
-                                                            className={styles.inputModeButton}
-                                                            title="切换到语音模式"
-                                                        >
-                                                            <Mic size={18} />
-                                                        </button>
-                                                    )}
+                                                    {!isVoiceCallActive && (
+                                                        <>
+                                                            {currentMode === 'voice' ? (
+                                                                /* 语音模式：显示键盘按钮切换回文本 */
+                                                                <button
+                                                                    onClick={() => switchMode('text')}
+                                                                    className={styles.inputModeButton}
+                                                                    title="切换到键盘模式"
+                                                                >
+                                                                    <Keyboard size={18} />
+                                                                </button>
+                                                            ) : (
+                                                                /* 文本模式：显示麦克风按钮切换到语音 */
+                                                                <button
+                                                                    onClick={() => switchMode('voice')}
+                                                                    className={styles.inputModeButton}
+                                                                    title="切换到语音模式"
+                                                                >
+                                                                    <Mic size={18} />
+                                                                </button>
+                                                            )}
 
-                                                    <button
-                                                        onClick={() => handleSendText()}
-                                                        className={styles.sendButton}
-                                                        disabled={loading || isUploading || currentMode === 'voice'}
-                                                    >
-                                                        <Send size={18} />
-                                                    </button>
+                                                            <button
+                                                                onClick={() => handleSendText()}
+                                                                className={styles.sendButton}
+                                                                disabled={loading || isUploading || currentMode === 'voice'}
+                                                            >
+                                                                <Send size={18} />
+                                                            </button>
+                                                        </>
+                                                    )}
                                                 </div>
                                             </div>
                                         </>
                                     )}
 
-                                    {/* 录音中显示 */}
-                                    {voiceStatus === 'recording' && (
+                                    {/* 录音中显示（仅在非语音通话模式下） */}
+                                    {voiceStatus === 'recording' && !isVoiceCallActive && (
                                         <>
                                             {/* 输入区域 */}
                                             <div className={styles.textInputWrapper}>
@@ -1064,8 +1249,8 @@ const AIQA = () => {
                                         </>
                                     )}
 
-                                    {/* 处理中显示 */}
-                                    {voiceStatus === 'processing' && (
+                                    {/* 处理中显示（仅在非语音通话模式下） */}
+                                    {voiceStatus === 'processing' && !isVoiceCallActive && (
                                         <>
                                             {/* 输入区域 */}
                                             <div className={styles.textInputWrapper}>
@@ -1115,6 +1300,17 @@ const AIQA = () => {
                                             <MessageSquarePlus/>
                                         </div>
                                         <span>新对话</span>
+                                    </button>
+
+                                    <button
+                                        onClick={isVoiceCallActive ? stopVoiceCall : startVoiceCall}
+                                        className={`${styles.voiceCallButton} ${isVoiceCallActive ? styles.active : ''}`}
+                                        disabled={loading || isUploading}
+                                    >
+                                        <div className={styles.toolbarIconWrapper}>
+                                            {isVoiceCallActive ? <PhoneOff /> : <Phone />}
+                                        </div>
+                                        <span>{isVoiceCallActive ? '结束通话' : '语音通话'}</span>
                                     </button>
 
                                     <Upload {...uploadProps} style={{ width: '100%' }}>
