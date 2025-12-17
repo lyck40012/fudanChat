@@ -53,6 +53,7 @@ const AIQA = () => {
     const [textInput, setTextInput] = useState('');
     const [voiceStatus, setVoiceStatus] = useState<VoiceStatus>('idle');
     const [fileList, setFileList] = useState<UploadFile[]>([]);
+    const fileListRef = useRef<UploadFile[]>([]); // 使用 ref 解决闭包问题
     const pressStartTimeRef = useRef<number | null>(null);
     const [selectedInputDevice, setSelectedInputDevice] = useState<string>('');
     const [hasPermission, setHasPermission] = useState<boolean | null>(null);
@@ -169,6 +170,12 @@ const AIQA = () => {
             audioRef.current.volume = audioVolume / 100
         }
     }, [audioVolume]);
+
+    // 同步 fileList state 到 ref，解决语音通话中的闭包问题
+    useEffect(() => {
+        fileListRef.current = fileList;
+    }, [fileList]);
+
     useEffect(() => {
         stopAudio()
     }, [currentMode]);
@@ -423,7 +430,6 @@ const AIQA = () => {
             clearTimeout(silenceTimerRef.current);
             silenceTimerRef.current = null;
         }
-        console.log(111111111)
         // 如果内容有变化，说明用户还在说话
         if (content && content !== lastContentRef.current) {
             lastContentRef.current = content;
@@ -431,7 +437,6 @@ const AIQA = () => {
             // 设置新的静默检测定时器（1秒）
             silenceTimerRef.current = setTimeout(() => {
                 // 1秒后如果没有新的内容更新，则自动发送
-
                 handleAutoSendInVoiceCall();
             }, 1000);
         }
@@ -458,12 +463,12 @@ const AIQA = () => {
             }
         }
 
-        // 发送消息
+        // 发送消息（使用 ref 获取最新的文件列表）
         const messageToSend = {
             ...recognizeResult.current,
-            imageUrls: fileList.length > 0 ? fileList : undefined
+            imageUrls: fileListRef.current.length > 0 ? fileListRef.current : undefined
         };
-
+        console.log(messageToSend, fileListRef.current)
         try {
             await start(messageToSend);
             // 发送后清空文件列表和识别结果
