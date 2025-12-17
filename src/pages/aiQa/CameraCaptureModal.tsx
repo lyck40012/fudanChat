@@ -51,6 +51,13 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({
             width={600}
             centered
             maskClosable={false}
+            styles={{
+                container:{
+                    padding: 0,
+                    borderRadius:24,
+                    overflow: 'hidden',
+                }
+            }}
             wrapClassName={styles.modalCustom}
             closeIcon={null} // 隐藏默认关闭图标，使用自定义的
         >
