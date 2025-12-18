@@ -340,6 +340,7 @@ const AIQA = () => {
         }
         // 监听转录结果更新
         client.on(WebsocketsEventType.TRANSCRIPTIONS_MESSAGE_UPDATE,(event: any) => {
+            stopAudio()
                 const userMsg: Message = {
                     logid: event.detail.logid,
                     id:event.id,
@@ -348,7 +349,6 @@ const AIQA = () => {
                     content_type:'text'
                 };
             recognizeResult.current =userMsg;
-            console.log(event, isVoiceCallActiveRef.current)
             // 如果处于语音通话模式，触发静默检测
             if (isVoiceCallActiveRef.current) {
                 handleVoiceCallContentUpdate(event.data.content);
@@ -485,7 +485,7 @@ const AIQA = () => {
         // 停止当前录音
         if (clientRef.current) {
             try {
-                clientRef.current.stop();
+              clientRef.current.stop();
             } catch (err) {
                 console.error('停止录音失败', err);
             }
@@ -499,10 +499,15 @@ const AIQA = () => {
         console.log(messageToSend, fileListRef.current)
         try {
             await start(messageToSend);
-            // 发送后清空文件列表和识别结果
             setFileList([]);
             recognizeResult.current = {} as Message;
             lastContentRef.current = '';
+            setTimeout(()=>{
+                console.log(23333333333333)
+                clientRef.current.start();
+            },1000)
+            console.log(clientRef.current)
+            console.log(" lastContentRef.current", lastContentRef.current)
 
             // 等待 AI 回答完成后，自动重新开始录音
             // 这个逻辑会在 loading 状态变化时处理
@@ -815,9 +820,6 @@ const AIQA = () => {
         }])
         setCurrentMode('text');
     };
-
-
-
     // 移除文件
     const handleRemoveFile = (file: UploadFile) => {
         const newFileList = fileList.filter(item => item.uid !== file.uid);
@@ -927,6 +929,7 @@ const AIQA = () => {
     };
 
     const stopAudio =()=>{
+        console.log("播报停止")
         if (audioRef.current) {
             audioRef.current.pause();
             audioRef.current.currentTime = 0;
