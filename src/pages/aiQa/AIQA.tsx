@@ -240,15 +240,18 @@ const AIQA = () => {
             audio.volume = audioVolume / 100
             audioRef.current = audio
             audio.onended = () => {
+                console.log('语音播报完成');
                 setIsAudioPlaying(false)
                 URL.revokeObjectURL(url)
             }
             audio.onerror = () => {
+                console.log('语音播报出错');
                 setIsAudioPlaying(false)
                 URL.revokeObjectURL(url)
             }
             await audio.play()
             setIsAudioPlaying(true)
+            console.log('开始语音播报')
         } catch (err) {
             if ((err as any)?.name === 'AbortError') return;
             console.error('语音播放失败', err)
@@ -281,14 +284,19 @@ const AIQA = () => {
     // 监听 loading 状态变化，在语音通话模式下 AI 回答完成后自动重新开始录音
     useEffect(() => {
         if (!loading && isVoiceCallActive) {
-            // AI 回答完成，重新开始录音
-            if (clientRef.current) {
-                try {
-                    clientRef.current.start();
-                } catch (err) {
-                    console.error('重新开始录音失败', err);
+            // AI 回答完成，延迟一小段时间后重新开始录音（等待播报开始）
+            const timer = setTimeout(() => {
+                if (clientRef.current && isVoiceCallActiveRef.current) {
+                    try {
+                        clientRef.current.start();
+                        console.log('AI回答完成，重新开始录音（播报期间也可录音）');
+                    } catch (err) {
+                        console.error('重新开始录音失败', err);
+                    }
                 }
-            }
+            }, 500); // 延迟500ms，确保播报已经开始
+
+            return () => clearTimeout(timer);
         }
     }, [loading, isVoiceCallActive])
 
@@ -340,21 +348,27 @@ const AIQA = () => {
         }
         // 监听转录结果更新
         client.on(WebsocketsEventType.TRANSCRIPTIONS_MESSAGE_UPDATE,(event: any) => {
-            stopAudio()
-                const userMsg: Message = {
-                    logid: event.detail.logid,
-                    id:event.id,
-                    role: 'user',
-                    content: event.data.content,
-                    content_type:'text'
-                };
-            recognizeResult.current =userMsg;
+            // 如果正在播报语音，且检测到用户说话，则打断播报
+            if (audioRef.current && !audioRef.current.paused) {
+                console.log('检测到用户说话，打断语音播报');
+                stopAudio();
+            }
+
+            const userMsg: Message = {
+                logid: event.detail.logid,
+                id:event.id,
+                role: 'user',
+                content: event.data.content,
+                content_type:'text'
+            };
+            recognizeResult.current = userMsg;
+
             // 如果处于语音通话模式，触发静默检测
             if (isVoiceCallActiveRef.current) {
                 handleVoiceCallContentUpdate(event.data.content);
             }
-            },
-        );
+        });
+
 
         // 监听错误事件
         client.on(WebsocketsEventType.ERROR, (error: unknown) => {
