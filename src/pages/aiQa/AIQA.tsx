@@ -500,6 +500,7 @@ const AIQA = () => {
         if (clientRef.current) {
             try {
               clientRef.current.stop();
+                clientRef.current.start();
             } catch (err) {
                 console.error('停止录音失败', err);
             }
@@ -516,11 +517,6 @@ const AIQA = () => {
             setFileList([]);
             recognizeResult.current = {} as Message;
             lastContentRef.current = '';
-            setTimeout(()=>{
-                console.log(23333333333333)
-                clientRef.current.start();
-            },1000)
-            console.log(clientRef.current)
             console.log(" lastContentRef.current", lastContentRef.current)
 
             // 等待 AI 回答完成后，自动重新开始录音
