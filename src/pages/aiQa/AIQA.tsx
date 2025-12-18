@@ -78,6 +78,12 @@ const AIQA = () => {
     const messageListRef = useRef<HTMLDivElement | null>(null);
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const speechAbortRef = useRef<AbortController | null>(null);
+    // Web Audio RMS 语音检测相关
+    const micStreamRef = useRef<MediaStream | null>(null);
+    const audioContextRef = useRef<AudioContext | null>(null);
+    const analyserRef = useRef<AnalyserNode | null>(null);
+    const rmsDataArrayRef = useRef<Uint8Array | null>(null);
+    const rmsRafRef = useRef<number | null>(null);
     const initialQuestionRef = useRef<string | null>(null);
     const [spokenMessageId, setSpokenMessageId] = useState<string | number | null>(null);
     const [voiceId, setVoiceId] = useState<string>('');
@@ -176,6 +182,7 @@ const AIQA = () => {
         recognizeResult.current = {}
         stop?.();
         setIsAudioPlaying(false);
+        stopVoiceActivityDetection();
         setIsVoiceCallActive(false);
         isVoiceCallActiveRef.current = false; // 同步更新 ref
     }, []);
@@ -316,6 +323,81 @@ const AIQA = () => {
         }
     };
 
+    // 使用 Web Audio + RMS 检测用户是否在说话，打断正在播报的 TTS
+    const startVoiceActivityDetection = async () => {
+        if (audioContextRef.current || rmsRafRef.current) return;
+        try {
+            const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+            if (!AudioCtx) {
+                console.warn('当前环境不支持 Web Audio API，无法启用 RMS 检测');
+                return;
+            }
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: {
+                    deviceId: selectedInputDevice ? { exact: selectedInputDevice } : undefined,
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true,
+                }
+            });
+            micStreamRef.current = stream;
+            const audioCtx = new AudioCtx();
+            audioContextRef.current = audioCtx;
+            const source = audioCtx.createMediaStreamSource(stream);
+            const analyser = audioCtx.createAnalyser();
+            analyser.fftSize = 1024;
+            source.connect(analyser);
+            analyserRef.current = analyser;
+            const buffer = new Uint8Array(analyser.fftSize);
+            rmsDataArrayRef.current = buffer;
+
+            const detect = () => {
+                if (!analyserRef.current || !rmsDataArrayRef.current) return;
+                analyserRef.current.getByteTimeDomainData(rmsDataArrayRef.current);
+                let sumSquares = 0;
+                for (let i = 0; i < rmsDataArrayRef.current.length; i++) {
+                    const v = (rmsDataArrayRef.current[i] - 128) / 128;
+                    sumSquares += v * v;
+                }
+                const rms = Math.sqrt(sumSquares / rmsDataArrayRef.current.length);
+                // 简单门限，检测到明显发声时中断播报
+                const RMS_THRESHOLD = 0.06;
+                if (rms > RMS_THRESHOLD && audioRef.current && !audioRef.current.paused) {
+                    console.log('RMS 检测到用户说话，打断语音播报', rms);
+                    stopAudio();
+                }
+                rmsRafRef.current = requestAnimationFrame(detect);
+            };
+            rmsRafRef.current = requestAnimationFrame(detect);
+        } catch (err) {
+            console.error('启动 RMS 语音检测失败', err);
+        }
+    };
+
+    const stopVoiceActivityDetection = () => {
+        if (rmsRafRef.current) {
+            cancelAnimationFrame(rmsRafRef.current);
+            rmsRafRef.current = null;
+        }
+        if (analyserRef.current) {
+            try {
+                analyserRef.current.disconnect();
+            } catch (err) {
+                console.error('断开 analyser 失败', err);
+            }
+            analyserRef.current = null;
+        }
+        if (audioContextRef.current) {
+            audioContextRef.current.close().catch(() => {});
+            audioContextRef.current = null;
+        }
+        if (micStreamRef.current) {
+            micStreamRef.current.getTracks().forEach(track => track.stop());
+            micStreamRef.current = null;
+        }
+        rmsDataArrayRef.current = null;
+    };
+
     const initClient = () => {
         if (!hasPermission) {
             throw new Error('麦克风权限未授予');
@@ -348,12 +430,6 @@ const AIQA = () => {
         }
         // 监听转录结果更新
         client.on(WebsocketsEventType.TRANSCRIPTIONS_MESSAGE_UPDATE,(event: any) => {
-            // 如果正在播报语音，且检测到用户说话，则打断播报
-            if (audioRef.current && !audioRef.current.paused) {
-                console.log('检测到用户说话，打断语音播报');
-                stopAudio();
-            }
-
             const userMsg: Message = {
                 logid: event.detail.logid,
                 id:event.id,
@@ -376,6 +452,8 @@ const AIQA = () => {
             // message.error((error as CommonErrorEvent).data.msg);
         });
         clientRef.current = client;
+        // 启动 RMS 语音检测，独立于转写结果
+        startVoiceActivityDetection();
     }
     const switchMode = (mode: InputMode) => {
         if (mode === 'voice' && !clientRef.current) {
@@ -602,12 +680,80 @@ const AIQA = () => {
             },1000)
             // 将上传的图片附加到语音识别结果中
 
-        } catch (error) {
+    } catch (error) {
             console.error('调用chat接口失败:', error);
             message.error('请求失败');
             // 发生错误时也要清空
             recognizeResult.current = {}
         }
+    };
+
+    // 安全停止录音：避免在多个分支里重复 try/catch
+    const safeStopTranscription = () => {
+        if (!clientRef.current) return;
+        try {
+            clientRef.current.stop();
+        } catch (err) {
+            console.error('停止录音失败', err);
+        }
+    };
+
+    // 统一组装“语音识别结果 + 图片”消息体（保持现有字段结构不变）
+    const buildMessageWithImages = (baseMessage: any, images: UploadFile[]) => {
+        return {
+            ...(baseMessage || {}),
+            imageUrls: images.length > 0 ? images : undefined
+        };
+    };
+
+    // 统一处理：按住说话松手后的发送/取消逻辑（触摸/鼠标共用）
+    const finalizePressToTalk = (options: {
+        cancel: boolean;
+        pressDuration: number;
+        fileListSnapshot: UploadFile[];
+    }) => {
+        const { cancel, pressDuration, fileListSnapshot } = options;
+
+        // 取消发送
+        if (cancel) {
+            safeStopTranscription();
+            recognizeResult.current = {} as Message;
+            message.info('已取消发送');
+            setIsCanceling(false);
+            return;
+        }
+
+        // 无语音内容且无图片：仅停止录音，不触发发送
+        if (!recognizeResult?.current?.content && fileListSnapshot.length === 0) {
+            safeStopTranscription();
+            return;
+        }
+
+        // 录音时间过短
+        if (pressDuration < 500) {
+            safeStopTranscription();
+            message.warning('时间过短');
+            return;
+        }
+
+        // 文件上传中不允许发送
+        if (isUploading) {
+            message.warning('文件正在上传中，请稍候...');
+            return;
+        }
+
+        // 延迟发送：保留原逻辑，给语音识别一个收尾时间
+        setTimeout(() => {
+            safeStopTranscription();
+            const messageWithImages = buildMessageWithImages(
+                recognizeResult?.current || {},
+                fileListSnapshot
+            );
+            start(messageWithImages);
+            // 发送后清空文件列表和识别结果
+            setFileList([]);
+            recognizeResult.current = {} as Message;
+        }, 1000);
     };
 
     // 触摸手势处理函数
@@ -641,63 +787,24 @@ const AIQA = () => {
         // 立即重置录音状态到 idle，让UI马上恢复
         setVoiceStatus('idle');
 
-        // 如果在取消区域，则取消发送
+        // 如果在取消区域，则取消发送；否则触发发送
         if (isCanceling) {
-            // 取消录音
-            if (clientRef.current) {
-                try {
-                    clientRef.current.stop();
-                } catch (err) {
-                    console.error('停止录音失败', err);
-                }
-            }
-            recognizeResult.current = {} as Message;
-            message.info('已取消发送');
-            setIsCanceling(false);
+            finalizePressToTalk({
+                cancel: true,
+                pressDuration: 0,
+                fileListSnapshot: []
+            });
         } else {
-            // 否则触发发送
-            const pressDuration = pressStartTimeRef.current ? Date.now() - pressStartTimeRef.current : 0;
+            const pressDuration = pressStartTimeRef.current
+                ? Date.now() - pressStartTimeRef.current
+                : 0;
             pressStartTimeRef.current = null;
-
-            if(!recognizeResult?.current?.content && !fileList.length){
-                if (clientRef.current) {
-                    try {
-                        clientRef.current.stop();
-                    } catch (err) {
-                        console.error('停止录音失败', err);
-                    }
-                }
-            } else if (pressDuration < 500) {
-                if (clientRef.current) {
-                    try {
-                        clientRef.current.stop();
-                    } catch (err) {
-                        console.error('停止录音失败', err);
-                    }
-                }
-                message.warning('时间过短');
-            } else if (!isUploading) {
-                // 正常发送
-                setTimeout(()=>{
-                    if (clientRef.current) {
-                        try {
-                            clientRef.current.stop();
-                        } catch (err) {
-                            console.error('停止录音失败', err);
-                        }
-                    }
-                    const messageWithImages = {
-                        ...(recognizeResult?.current ||{}),
-                        imageUrls: fileList.length > 0 ? fileList : undefined
-                    };
-                    start(messageWithImages);
-                    // 发送后清空文件列表和识别结果
-                    setFileList([]);
-                    recognizeResult.current = {};
-                }, 1000);
-            } else {
-                message.warning('文件正在上传中，请稍候...');
-            }
+            const fileListSnapshot = [...fileList];
+            finalizePressToTalk({
+                cancel: false,
+                pressDuration,
+                fileListSnapshot
+            });
         }
 
         setTouchStartY(0);
@@ -743,64 +850,24 @@ const AIQA = () => {
             // 立即重置录音状态到 idle，让UI马上恢复
             setVoiceStatus('idle');
 
-            // 如果在取消区域，则取消发送
+            // 如果在取消区域，则取消发送；否则触发发送
             if (currentCanceling) {
-                // 取消录音
-                if (clientRef.current) {
-                    try {
-                        clientRef.current.stop();
-                    } catch (err) {
-                        console.error('停止录音失败', err);
-                    }
-                }
-                recognizeResult.current = {} as Message;
-                message.info('已取消发送');
-                setIsCanceling(false);
+                finalizePressToTalk({
+                    cancel: true,
+                    pressDuration: 0,
+                    fileListSnapshot: []
+                });
             } else {
-                // 否则触发发送（此时状态已经是 idle，stopRecording 内部检查需要调整）
-                // 直接处理发送逻辑
-                const pressDuration = pressStartTimeRef.current ? Date.now() - pressStartTimeRef.current : 0;
+                const pressDuration = pressStartTimeRef.current
+                    ? Date.now() - pressStartTimeRef.current
+                    : 0;
                 pressStartTimeRef.current = null;
-
-                if(!recognizeResult?.current?.content && !fileList.length){
-                    if (clientRef.current) {
-                        try {
-                            clientRef.current.stop();
-                        } catch (err) {
-                            console.error('停止录音失败', err);
-                        }
-                    }
-                } else if (pressDuration < 500) {
-                    if (clientRef.current) {
-                        try {
-                            clientRef.current.stop();
-                        } catch (err) {
-                            console.error('停止录音失败', err);
-                        }
-                    }
-                    message.warning('时间过短');
-                } else if (!isUploading) {
-                    // 正常发送
-                    setTimeout(()=>{
-                        if (clientRef.current) {
-                            try {
-                                clientRef.current.stop();
-                            } catch (err) {
-                                console.error('停止录音失败', err);
-                            }
-                        }
-                        const messageWithImages = {
-                            ...(recognizeResult?.current ||{}),
-                            imageUrls: fileList.length > 0 ? fileList : undefined
-                        };
-                        start(messageWithImages);
-                        // 发送后清空文件列表和识别结果
-                        setFileList([]);
-                        recognizeResult.current = {};
-                    }, 1000);
-                } else {
-                    message.warning('文件正在上传中，请稍候...');
-                }
+                const fileListSnapshot = [...fileList];
+                finalizePressToTalk({
+                    cancel: false,
+                    pressDuration,
+                    fileListSnapshot
+                });
             }
 
             setTouchStartY(0);
@@ -1040,6 +1107,154 @@ const AIQA = () => {
         handleSendText(question);
     }, [location.state]);
 
+    // 统一渲染输入区域：减少 idle/recording/processing 的重复 JSX
+    const renderInputArea = () => {
+        const sendDisabled = loading || isUploading || currentMode === 'voice';
+        const voiceGestureHandlers: Pick<
+            React.HTMLAttributes<HTMLDivElement>,
+            'onMouseDown' | 'onTouchStart' | 'onTouchMove' | 'onTouchEnd'
+        > = {
+            onMouseDown: handleVoiceMouseDown,
+            onTouchStart: handleVoiceTouchStart,
+            onTouchMove: handleVoiceTouchMove,
+            onTouchEnd: handleVoiceTouchEnd,
+        };
+
+        // 语音通话模式：仅展示状态提示，不展示输入按钮
+        if (isVoiceCallActive) {
+            return (
+                <div className={styles.textInputWrapper}>
+                    <div className={styles.textInputContainer}>
+                        <div className={`${styles.voicePrompt} ${styles.calling}`}>
+                            <Phone className={styles.voiceIcon} size={20} />
+                            <span className={styles.voiceText}>
+                                {loading ? 'AI正在回答...' : '语音通话中...'}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // 处理中（仅在非语音通话模式下显示）
+        if (voiceStatus === 'processing') {
+            return (
+                <div className={styles.textInputWrapper}>
+                    <div className={styles.textInputContainer}>
+                        <div className={`${styles.voicePrompt} ${styles.processing}`}>
+                            <Mic className={styles.voiceIcon} size={20} />
+                            <span className={styles.voiceText}>正在处理...</span>
+                        </div>
+
+                        <button
+                            onClick={() => switchMode('text')}
+                            className={styles.inputModeButton}
+                            title="切换到键盘模式"
+                        >
+                            <Keyboard size={18} />
+                        </button>
+
+                        <button
+                            onClick={() => handleSendText()}
+                            className={styles.sendButton}
+                            disabled={sendDisabled}
+                        >
+                            <Send size={18} />
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        // 录音中（仅在非语音通话模式下显示）
+        if (voiceStatus === 'recording') {
+            return (
+                <div className={styles.textInputWrapper}>
+                    <div className={styles.textInputContainer}>
+                        <div
+                            className={`${styles.voicePrompt} ${styles.recording}`}
+                            {...voiceGestureHandlers}
+                        >
+                            <Mic className={styles.voiceIcon} size={20} />
+                            <span className={styles.voiceText}>正在录音...松开发送</span>
+                        </div>
+
+                        <button
+                            onClick={() => switchMode('text')}
+                            className={styles.inputModeButton}
+                            title="切换到键盘模式"
+                        >
+                            <Keyboard size={18} />
+                        </button>
+
+                        <button
+                            onClick={() => handleSendText()}
+                            className={styles.sendButton}
+                            disabled={sendDisabled}
+                        >
+                            <Send size={18} />
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        // 空闲态：根据 currentMode 展示文本输入或按住说话
+        return (
+            <div className={styles.textInputWrapper}>
+                <div className={styles.textInputContainer}>
+                    {currentMode === 'voice' ? (
+                        <div className={styles.voicePrompt} {...voiceGestureHandlers}>
+                            <Mic className={styles.voiceIcon} size={20} />
+                            <span className={styles.voiceText}>长按此处开始说话</span>
+                        </div>
+                    ) : (
+                        <textarea
+                            value={textInput}
+                            onChange={(e) => setTextInput(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    handleSendText();
+                                }
+                            }}
+                            placeholder="请输入指令..."
+                            className={styles.textInput}
+                            disabled={loading || isUploading}
+                            rows={1}
+                        />
+                    )}
+
+                    {currentMode === 'voice' ? (
+                        <button
+                            onClick={() => switchMode('text')}
+                            className={styles.inputModeButton}
+                            title="切换到键盘模式"
+                        >
+                            <Keyboard size={18} />
+                        </button>
+                    ) : (
+                        <button
+                            onClick={() => switchMode('voice')}
+                            className={styles.inputModeButton}
+                            title="切换到语音模式"
+                        >
+                            <Mic size={18} />
+                        </button>
+                    )}
+
+                    <button
+                        onClick={() => handleSendText()}
+                        className={styles.sendButton}
+                        disabled={sendDisabled}
+                    >
+                        <Send size={18} />
+                    </button>
+                </div>
+            </div>
+        );
+    };
+
     const getToolbarButtonClasses = (mode: InputMode) => {
         const classNames = [styles.toolbarButton];
         if (currentMode === mode) {
@@ -1177,160 +1392,7 @@ const AIQA = () => {
                                             ))}
                                         </div>
                                     )}
-
-                                    {voiceStatus === 'idle' && (
-                                        <>
-                                            {/* 输入区域 */}
-                                            <div className={styles.textInputWrapper}>
-                                                <div className={styles.textInputContainer}>
-                                                    {/* 语音通话模式 */}
-                                                    {isVoiceCallActive ? (
-                                                        <div className={`${styles.voicePrompt} ${styles.calling}`}>
-                                                            <Phone className={styles.voiceIcon} size={20} />
-                                                            <span className={styles.voiceText}>
-                                                                {loading ? 'AI正在回答...' : '语音通话中...'}
-                                                            </span>
-                                                        </div>
-                                                    ) : currentMode === 'voice' ? (
-                                                        /* 按住说话模式 */
-                                                        <div
-                                                            className={`${styles.voicePrompt} ${voiceStatus === 'recording' ? styles.recording : ''}`}
-                                                            onMouseDown={handleVoiceMouseDown}
-                                                            onTouchStart={handleVoiceTouchStart}
-                                                            onTouchMove={handleVoiceTouchMove}
-                                                            onTouchEnd={handleVoiceTouchEnd}
-                                                        >
-                                                            <Mic className={styles.voiceIcon} size={20} />
-                                                            <span className={styles.voiceText}>
-                                                                长按此处开始说话
-                                                            </span>
-                                                        </div>
-                                                    ) : (
-                                                        /* 文本模式显示输入框 */
-                                                        <textarea
-                                                            value={textInput}
-                                                            onChange={(e) => setTextInput(e.target.value)}
-                                                            onKeyDown={(e) => {
-                                                                if (e.key === 'Enter' && !e.shiftKey) {
-                                                                    e.preventDefault();
-                                                                    handleSendText();
-                                                                }
-                                                            }}
-                                                            placeholder="请输入指令..."
-                                                            className={styles.textInput}
-                                                            disabled={loading || isUploading}
-                                                            rows={1}
-                                                        />
-                                                    )}
-
-                                                    {/* 根据模式显示不同的按钮 */}
-                                                    {!isVoiceCallActive && (
-                                                        <>
-                                                            {currentMode === 'voice' ? (
-                                                                /* 语音模式：显示键盘按钮切换回文本 */
-                                                                <button
-                                                                    onClick={() => switchMode('text')}
-                                                                    className={styles.inputModeButton}
-                                                                    title="切换到键盘模式"
-                                                                >
-                                                                    <Keyboard size={18} />
-                                                                </button>
-                                                            ) : (
-                                                                /* 文本模式：显示麦克风按钮切换到语音 */
-                                                                <button
-                                                                    onClick={() => switchMode('voice')}
-                                                                    className={styles.inputModeButton}
-                                                                    title="切换到语音模式"
-                                                                >
-                                                                    <Mic size={18} />
-                                                                </button>
-                                                            )}
-
-                                                            <button
-                                                                onClick={() => handleSendText()}
-                                                                className={styles.sendButton}
-                                                                disabled={loading || isUploading || currentMode === 'voice'}
-                                                            >
-                                                                <Send size={18} />
-                                                            </button>
-                                                        </>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </>
-                                    )}
-
-                                    {/* 录音中显示（仅在非语音通话模式下） */}
-                                    {voiceStatus === 'recording' && !isVoiceCallActive && (
-                                        <>
-                                            {/* 输入区域 */}
-                                            <div className={styles.textInputWrapper}>
-                                                <div className={styles.textInputContainer}>
-                                                    <div
-                                                        className={`${styles.voicePrompt} ${styles.recording}`}
-                                                        onMouseDown={handleVoiceMouseDown}
-                                                        onTouchStart={handleVoiceTouchStart}
-                                                        onTouchMove={handleVoiceTouchMove}
-                                                        onTouchEnd={handleVoiceTouchEnd}
-                                                    >
-                                                        <Mic className={styles.voiceIcon} size={20} />
-                                                        <span className={styles.voiceText}>
-                                                            正在录音...松开发送
-                                                        </span>
-                                                    </div>
-
-                                                    <button
-                                                        onClick={() => switchMode('text')}
-                                                        className={styles.inputModeButton}
-                                                        title="切换到键盘模式"
-                                                    >
-                                                        <Keyboard size={18} />
-                                                    </button>
-
-                                                    <button
-                                                        onClick={() => handleSendText()}
-                                                        className={styles.sendButton}
-                                                        disabled={loading || isUploading || currentMode === 'voice'}
-                                                    >
-                                                        <Send size={18} />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </>
-                                    )}
-
-                                    {/* 处理中显示（仅在非语音通话模式下） */}
-                                    {voiceStatus === 'processing' && !isVoiceCallActive && (
-                                        <>
-                                            {/* 输入区域 */}
-                                            <div className={styles.textInputWrapper}>
-                                                <div className={styles.textInputContainer}>
-                                                    <div className={`${styles.voicePrompt} ${styles.processing}`}>
-                                                        <Mic className={styles.voiceIcon} size={20} />
-                                                        <span className={styles.voiceText}>
-                                                            正在处理...
-                                                        </span>
-                                                    </div>
-
-                                                    <button
-                                                        onClick={() => switchMode('text')}
-                                                        className={styles.inputModeButton}
-                                                        title="切换到键盘模式"
-                                                    >
-                                                        <Keyboard size={18} />
-                                                    </button>
-
-                                                    <button
-                                                        onClick={() => handleSendText()}
-                                                        className={styles.sendButton}
-                                                        disabled={loading || isUploading || currentMode === 'voice'}
-                                                    >
-                                                        <Send size={18} />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </>
-                                    )}
+                                    {renderInputArea()}
                                 </div>
                             </div>
 
