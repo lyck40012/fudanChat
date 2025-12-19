@@ -1352,23 +1352,23 @@ const AIQA = () => {
                             </div>
 
                             <div className={styles.toolbar}>
-                                <button onClick={() => navigate('/')} className={styles.homeButton}>
-                                    <Home/>
-                                    <span>返回</span>
-                                </button>
-
-                                <div className={styles.toolbarButtons}>
-                                    <button
-                                        onClick={handleNewConversation}
-                                        className={styles.newConversationButton}
-                                        disabled={loading}
-                                    >
-                                        <div className={styles.toolbarIconWrapper}>
-                                            <MessageSquarePlus/>
-                                        </div>
-                                        <span>新对话</span>
+                                <div className={styles.topButtons}>
+                                    <button onClick={() => navigate('/')} className={styles.homeButton}>
+                                        <Home/>
+                                        <span>返回</span>
                                     </button>
 
+                                    <button
+                                        onClick={handleNewConversation}
+                                        className={styles.homeButton}
+                                        disabled={loading}
+                                    >
+                                        <MessageSquarePlus/>
+                                        <span>新对话</span>
+                                    </button>
+                                </div>
+
+                                <div className={styles.toolbarButtons}>
                                     <button
                                         onMouseDown={handleVoiceMouseDown}
                                         onTouchStart={handleVoiceTouchStart}
@@ -1391,7 +1391,7 @@ const AIQA = () => {
                                         <div className={styles.toolbarIconWrapper}>
                                             {isVoiceCallActive ? <PhoneOff /> : <Phone />}
                                         </div>
-                                        <span>{isVoiceCallActive ? '结束通话' : '语音通话'}</span>
+                                        <span>{isVoiceCallActive ? '结束通话' : '实时通话'}</span>
                                     </button>
 
                                     <Upload {...uploadProps} style={{ width: '100%' }}>
