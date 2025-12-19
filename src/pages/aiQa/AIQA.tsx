@@ -27,6 +27,12 @@ declare global {
     }
 }
 
+// 获取语音通话静默检测时长（毫秒），默认 1000ms
+const getVoiceCallSilenceTimeout = () => {
+    return window.APP_CONFIG?.voiceCallSilenceTimeout ?? 1000;
+};
+console.log("当前秒数为", getVoiceCallSilenceTimeout() +'秒');
+
 type InputMode = 'voice' | 'file' | 'camera' | 'text';
 type VoiceStatus = 'idle' | 'recording' | 'processing';
 
@@ -36,8 +42,10 @@ interface Message {
     content: string;
     imageUrl?: string;
     imageUrls?: string[];  // 支持多张图片
+
     fileName?: string;
 }
+
 const md = markdownit({ html: true, breaks: true });
 
 const renderMarkdown: any = (content) => {
@@ -45,7 +53,26 @@ const renderMarkdown: any = (content) => {
     return <div dangerouslySetInnerHTML={{ __html: md.render(result) }} />;
 };
 
+
 const AIQA = () => {
+    let timeerRef = useRef(null);
+    useEffect(()=>{
+        if(timeerRef.current){
+            timeerRef.current = null
+            clearTimeout(timeerRef.current);
+        }else {
+            timeerRef.current =   setInterval(()=>{
+                const now = new Date();
+                const hour = now.getHours();
+                const minute = now.getMinutes();
+                const second = now.getSeconds();
+                console.log(`${hour}:${minute}:${second}`);
+
+            },1000)
+        }
+    },[])
+
+
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -432,6 +459,7 @@ const AIQA = () => {
                 content: event.data.content,
                 content_type:'text'
             };
+            console.log("监听到说话====>",event.data.content)
             recognizeResult.current = userMsg;
 
             // 如果处于语音通话模式，触发静默检测
@@ -544,6 +572,7 @@ const AIQA = () => {
         if (silenceTimerRef.current) {
             clearTimeout(silenceTimerRef.current);
             silenceTimerRef.current = null;
+            console.log("重置定时器")
         }
         // 如果内容有变化，说明用户还在说话
         if (content && content !== lastContentRef.current) {
@@ -553,12 +582,14 @@ const AIQA = () => {
             silenceTimerRef.current = setTimeout(() => {
                 // N秒后如果没有新的内容更新，则自动发送
                 handleAutoSendInVoiceCall();
-            }, 1500);
+
+            }, getVoiceCallSilenceTimeout());
         }
     };
 
     // 语音通话模式下的自动发送
     const handleAutoSendInVoiceCall = async () => {
+        console.log("触发发送")
         if (!isVoiceCallActiveRef.current) return;
 
         // 检查是否有内容
