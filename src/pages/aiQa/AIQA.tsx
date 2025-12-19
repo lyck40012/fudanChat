@@ -27,11 +27,6 @@ declare global {
     }
 }
 
-// 获取语音通话静默检测时长（毫秒），默认 1000ms
-const getVoiceCallSilenceTimeout = () => {
-    return window.APP_CONFIG?.voiceCallSilenceTimeout ?? 1000;
-};
-
 type InputMode = 'voice' | 'file' | 'camera' | 'text';
 type VoiceStatus = 'idle' | 'recording' | 'processing';
 
@@ -558,7 +553,7 @@ const AIQA = () => {
             silenceTimerRef.current = setTimeout(() => {
                 // N秒后如果没有新的内容更新，则自动发送
                 handleAutoSendInVoiceCall();
-            }, getVoiceCallSilenceTimeout());
+            }, 1500);
         }
     };
 
