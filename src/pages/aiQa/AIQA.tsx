@@ -115,7 +115,9 @@ const AIQA = () => {
     const isUploadingRef = useRef(false); // 使用 ref 解决闭包问题
     // 触摸手势相关状态
     const [showMask, setShowMask] = useState(false); // 是否显示遮罩层
+    const [touchStartX, setTouchStartX] = useState<number>(0); // 触摸起始X坐标
     const [touchStartY, setTouchStartY] = useState<number>(0); // 触摸起始Y坐标
+    const [currentTouchX, setCurrentTouchX] = useState<number>(0); // 当前触摸X坐标
     const [currentTouchY, setCurrentTouchY] = useState<number>(0); // 当前触摸Y坐标
     const [isCanceling, setIsCanceling] = useState(false); // 是否在取消区域
     const [isMouseDown, setIsMouseDown] = useState(false); // 鼠标是否按下
@@ -786,7 +788,9 @@ const AIQA = () => {
     const handleVoiceTouchStart = (e: React.TouchEvent) => {
         e.preventDefault();
         const touch = e.touches[0];
+        setTouchStartX(touch.clientX);
         setTouchStartY(touch.clientY);
+        setCurrentTouchX(touch.clientX);
         setCurrentTouchY(touch.clientY);
         setShowMask(true);
         setIsCanceling(false);
@@ -796,11 +800,12 @@ const AIQA = () => {
     const handleVoiceTouchMove = (e: React.TouchEvent) => {
         e.preventDefault();
         const touch = e.touches[0];
+        setCurrentTouchX(touch.clientX);
         setCurrentTouchY(touch.clientY);
 
-        // 计算滑动距离，向上滑动为负值
-        const distance = touchStartY - touch.clientY;
-        // 如果向上滑动超过100px，则进入取消区域
+        // 计算滑动距离，向左滑动为负值
+        const distance = touchStartX - touch.clientX;
+        // 如果向左滑动超过100px，则进入取消区域
         const CANCEL_THRESHOLD = 100;
         setIsCanceling(distance > CANCEL_THRESHOLD);
     };
@@ -833,7 +838,9 @@ const AIQA = () => {
             });
         }
 
+        setTouchStartX(0);
         setTouchStartY(0);
+        setCurrentTouchX(0);
         setCurrentTouchY(0);
     };
 
@@ -841,24 +848,27 @@ const AIQA = () => {
     const handleVoiceMouseDown = (e: React.MouseEvent) => {
         e.preventDefault();
         setIsMouseDown(true);
+        setTouchStartX(e.clientX);
         setTouchStartY(e.clientY);
+        setCurrentTouchX(e.clientX);
         setCurrentTouchY(e.clientY);
         setShowMask(true);
         setIsCanceling(false);
         startRecording();
 
         // 保存起始位置，用于计算距离
-        const startY = e.clientY;
+        const startX = e.clientX;
         let currentCanceling = false;
 
         // 在 document 上添加事件监听，这样即使鼠标移出元素也能监听到
         const handleDocumentMouseMove = (e: MouseEvent) => {
             e.preventDefault();
+            setCurrentTouchX(e.clientX);
             setCurrentTouchY(e.clientY);
 
-            // 计算滑动距离，向上滑动为负值
-            const dist = startY - e.clientY;
-            // 如果向上滑动超过100px，则进入取消区域
+            // 计算滑动距离，向左滑动为负值
+            const dist = startX - e.clientX;
+            // 如果向左滑动超过100px，则进入取消区域
             const CANCEL_THRESHOLD = 100;
             currentCanceling = dist > CANCEL_THRESHOLD;
             setIsCanceling(currentCanceling);
@@ -896,7 +906,9 @@ const AIQA = () => {
                 });
             }
 
+            setTouchStartX(0);
             setTouchStartY(0);
+            setCurrentTouchX(0);
             setCurrentTouchY(0);
         };
 
@@ -1133,18 +1145,9 @@ const AIQA = () => {
         handleSendText(question);
     }, [location.state]);
 
-    // 统一渲染输入区域：减少 idle/recording/processing 的重复 JSX
+    // 统一渲染输入区域：仅保留文本输入模式
     const renderInputArea = () => {
-        const sendDisabled = loading || isUploading || currentMode === 'voice';
-        const voiceGestureHandlers: Pick<
-            React.HTMLAttributes<HTMLDivElement>,
-            'onMouseDown' | 'onTouchStart' | 'onTouchMove' | 'onTouchEnd'
-        > = {
-            onMouseDown: handleVoiceMouseDown,
-            onTouchStart: handleVoiceTouchStart,
-            onTouchMove: handleVoiceTouchMove,
-            onTouchEnd: handleVoiceTouchEnd,
-        };
+        const sendDisabled = loading || isUploading;
 
         // 语音通话模式：仅展示状态提示，不展示输入按钮
         if (isVoiceCallActive) {
@@ -1162,112 +1165,38 @@ const AIQA = () => {
             );
         }
 
-        // 处理中（仅在非语音通话模式下显示）
-        if (voiceStatus === 'processing') {
+        // 录音中：显示语音模式提示
+        if (voiceStatus === 'recording'&&false) {
             return (
                 <div className={styles.textInputWrapper}>
                     <div className={styles.textInputContainer}>
-                        <div className={`${styles.voicePrompt} ${styles.processing}`}>
+                        <div className={`${styles.voicePrompt} ${styles.recording}`}>
                             <Mic className={styles.voiceIcon} size={20} />
-                            <span className={styles.voiceText}>正在处理...</span>
+                            <span className={styles.voiceText}>当前处于语音模式</span>
                         </div>
-
-                        <button
-                            onClick={() => switchMode('text')}
-                            className={styles.inputModeButton}
-                            title="切换到键盘模式"
-                        >
-                            <Keyboard size={18} />
-                        </button>
-
-                        <button
-                            onClick={() => handleSendText()}
-                            className={styles.sendButton}
-                            disabled={sendDisabled}
-                        >
-                            <Send size={18} />
-                        </button>
                     </div>
                 </div>
             );
         }
 
-        // 录音中（仅在非语音通话模式下显示）
-        if (voiceStatus === 'recording') {
-            return (
-                <div className={styles.textInputWrapper}>
-                    <div className={styles.textInputContainer}>
-                        <div
-                            className={`${styles.voicePrompt} ${styles.recording}`}
-                            {...voiceGestureHandlers}
-                        >
-                            <Mic className={styles.voiceIcon} size={20} />
-                            <span className={styles.voiceText}>正在录音...松开发送</span>
-                        </div>
-
-                        <button
-                            onClick={() => switchMode('text')}
-                            className={styles.inputModeButton}
-                            title="切换到键盘模式"
-                        >
-                            <Keyboard size={18} />
-                        </button>
-
-                        <button
-                            onClick={() => handleSendText()}
-                            className={styles.sendButton}
-                            disabled={sendDisabled}
-                        >
-                            <Send size={18} />
-                        </button>
-                    </div>
-                </div>
-            );
-        }
-
-        // 空闲态：根据 currentMode 展示文本输入或按住说话
+        // 文本输入模式
         return (
             <div className={styles.textInputWrapper}>
                 <div className={styles.textInputContainer}>
-                    {currentMode === 'voice' ? (
-                        <div className={styles.voicePrompt} {...voiceGestureHandlers}>
-                            <Mic className={styles.voiceIcon} size={20} />
-                            <span className={styles.voiceText}>长按此处开始说话</span>
-                        </div>
-                    ) : (
-                        <textarea
-                            value={textInput}
-                            onChange={(e) => setTextInput(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' && !e.shiftKey) {
-                                    e.preventDefault();
-                                    handleSendText();
-                                }
-                            }}
-                            placeholder="请输入指令..."
-                            className={styles.textInput}
-                            disabled={loading || isUploading}
-                            rows={1}
-                        />
-                    )}
-
-                    {currentMode === 'voice' ? (
-                        <button
-                            onClick={() => switchMode('text')}
-                            className={styles.inputModeButton}
-                            title="切换到键盘模式"
-                        >
-                            <Keyboard size={18} />
-                        </button>
-                    ) : (
-                        <button
-                            onClick={() => switchMode('voice')}
-                            className={styles.inputModeButton}
-                            title="切换到语音模式"
-                        >
-                            <Mic size={18} />
-                        </button>
-                    )}
+                    <textarea
+                        value={textInput}
+                        onChange={(e) => setTextInput(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                handleSendText();
+                            }
+                        }}
+                        placeholder="请输入指令..."
+                        className={styles.textInput}
+                        disabled={loading || isUploading}
+                        rows={1}
+                    />
 
                     <button
                         onClick={() => handleSendText()}
@@ -1301,7 +1230,7 @@ const AIQA = () => {
                             <Mic size={60} />
                         </div>
                         <div className={styles.maskText}>
-                            {isCanceling ? '松开，取消发送' : '上划取消'}
+                            {isCanceling ? '松开，取消发送' : '左滑取消'}
                         </div>
                         <div className={styles.maskHint}>
                             {isCanceling ? '' : '松开，发送消息'}
@@ -1438,6 +1367,20 @@ const AIQA = () => {
                                             <MessageSquarePlus/>
                                         </div>
                                         <span>新对话</span>
+                                    </button>
+
+                                    <button
+                                        onMouseDown={handleVoiceMouseDown}
+                                        onTouchStart={handleVoiceTouchStart}
+                                        onTouchMove={handleVoiceTouchMove}
+                                        onTouchEnd={handleVoiceTouchEnd}
+                                        className={`${getToolbarButtonClasses('voice')} ${voiceStatus === 'recording' ? styles.recording : ''}`}
+                                        disabled={loading || isUploading || isVoiceCallActive}
+                                    >
+                                        <div className={styles.toolbarIconWrapper}>
+                                            <Mic />
+                                        </div>
+                                        <span>语音</span>
                                     </button>
 
                                     <button
