@@ -67,9 +67,7 @@ export function Home() {
               >
                   <div className={styles.cardBorder}></div>
                   <MessageOutlined className={styles.cardIcon} />
-                  <span className={styles.cardText} style={{
-                      color:'#a70707'
-                  }}>已预约医生，点击预问诊！</span>
+                  <span className={styles.cardText}>已预约医生，点击预问诊！</span>
                   <div className={styles.cardArrow}>→</div>
               </button>
 
