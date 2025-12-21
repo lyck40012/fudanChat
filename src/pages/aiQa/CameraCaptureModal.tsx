@@ -30,7 +30,6 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({
             if (json.code === 0 && json.data?.url) {
                 const fullUrl = `${DEFAULT_BASE}${json.data.url}`
                 onCaptured(fullUrl)
-                message.success('拍摄成功，已加入输入框')
                 onClose()
             } else {
                 message.error(json.msg || '拍摄失败')

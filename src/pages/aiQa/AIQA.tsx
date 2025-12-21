@@ -926,14 +926,34 @@ const AIQA = () => {
         setCameraModalVisible(false);
     };
 
-    const handleCapturedImage = (url: string) => {
-        setFileList([...fileList, {
-            uid: Date.now().toString(),
-            url,
-            isShoot: true,
-            type: 'image/jpeg',
-        }])
-        setCurrentMode('text');
+    // 拍摄结果：先展示在列表，再调用上传
+    const handleCapturedImage = async (url: string) => {
+        try {
+            // URL → Blob → File
+            const res = await fetch(url);
+            const blob = await res.blob();
+            const fileName = `capture_${Date.now()}.jpg`;
+            const file = new File([blob], fileName, { type: blob.type || 'image/jpeg' });
+
+            const uploadFile: UploadFile = {
+                uid: `camera_${Date.now()}`,
+                name: fileName,
+                originFileObj: file,
+                type: file.type,
+                url,
+                status: 'uploading',
+            };
+
+            // 先写入列表以展示缩略图/进度
+            setFileList(prev => [...prev, uploadFile]);
+
+            await uploadFileWithFetch(uploadFile);
+        } catch (err) {
+            console.error('上传拍摄图片失败', err);
+            message.error('拍摄图片上传失败');
+        } finally {
+            setCurrentMode('text');
+        }
     };
     // 移除文件
     const handleRemoveFile = (file: UploadFile) => {

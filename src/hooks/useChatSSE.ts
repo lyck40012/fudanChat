@@ -58,13 +58,9 @@ export function useChatSSE({url, headers = {}, botId = '7574375637029273609'}) {
 
             userMessage.imageUrls.forEach(x => {
                 let obj = {
-                    type: x.type.includes('image') ? "image" : 'file',
+                    type: 'file',
                 }
-                if (x?.isShoot) {
-                    obj['file_url'] = x.url
-                } else {
-                    obj['file_id'] = x.response.id
-                }
+                  obj['file_id'] = x.response.id
                 arr.push(obj)
             })
             requestMessageArr.push({
