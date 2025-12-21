@@ -81,7 +81,7 @@ const AIQA = () => {
 
     // 创建 Coze API 客户端实例
     const cozeClient = useRef(new CozeAPI({
-        token: 'pat_hD3fk5ygNuFPLz5ndwIKYWmwY8qgET9DrruIA3Ean8cCEPfSi6o40EZmMg03TS5P',
+        token: 'pat_zkUh7PgT34IDtE2y4VBBgnTZjBc3nZ2yZ9gXIwia6cYxpzfMMiwELEf3sZyjceYE',
         allowPersonalAccessTokenInBrowser: true,
         baseURL: 'https://api.coze.cn',
     })).current;
@@ -160,7 +160,7 @@ const AIQA = () => {
                 const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/v1/audio/voices`, {
                     method: 'GET',
                     headers: {
-                        Authorization: 'Bearer pat_hD3fk5ygNuFPLz5ndwIKYWmwY8qgET9DrruIA3Ean8cCEPfSi6o40EZmMg03TS5P'
+                        Authorization: 'Bearer pat_zkUh7PgT34IDtE2y4VBBgnTZjBc3nZ2yZ9gXIwia6cYxpzfMMiwELEf3sZyjceYE'
                     },
                 })
                 if (!res.ok) throw new Error(`拉取音色失败: ${res.status}`)
@@ -252,7 +252,7 @@ const AIQA = () => {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    Authorization: 'Bearer pat_hD3fk5ygNuFPLz5ndwIKYWmwY8qgET9DrruIA3Ean8cCEPfSi6o40EZmMg03TS5P'
+                    Authorization: 'Bearer pat_zkUh7PgT34IDtE2y4VBBgnTZjBc3nZ2yZ9gXIwia6cYxpzfMMiwELEf3sZyjceYE'
                 },
                 signal: controller.signal,
                 body: JSON.stringify({
@@ -427,7 +427,7 @@ const AIQA = () => {
             throw new Error('麦克风权限未授予');
         }
         const client = new WsTranscriptionClient({
-            token: 'pat_hD3fk5ygNuFPLz5ndwIKYWmwY8qgET9DrruIA3Ean8cCEPfSi6o40EZmMg03TS5P',
+            token: 'pat_zkUh7PgT34IDtE2y4VBBgnTZjBc3nZ2yZ9gXIwia6cYxpzfMMiwELEf3sZyjceYE',
             baseWsURL: 'wss://ws.coze.cn',
             allowPersonalAccessTokenInBrowser: true,
             debug: false,

@@ -83,7 +83,7 @@ export function useChatSSE({url, headers = {}, botId = '7574375637029273609'}) {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    "Authorization": 'Bearer pat_hD3fk5ygNuFPLz5ndwIKYWmwY8qgET9DrruIA3Ean8cCEPfSi6o40EZmMg03TS5P',
+                    "Authorization": 'Bearer pat_zkUh7PgT34IDtE2y4VBBgnTZjBc3nZ2yZ9gXIwia6cYxpzfMMiwELEf3sZyjceYE',
                     ...headers
                 },
                 body: JSON.stringify({

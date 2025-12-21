@@ -16,7 +16,7 @@ type CallStatus = 'connecting' | 'active' | 'ended';
 
 
 const COZE_BASE_WS_URL = 'wss://ws.coze.cn';
-const COZE_PERSONAL_ACCESS_TOKEN = 'pat_hD3fk5ygNuFPLz5ndwIKYWmwY8qgET9DrruIA3Ean8cCEPfSi6o40EZmMg03TS5P';
+const COZE_PERSONAL_ACCESS_TOKEN = 'pat_zkUh7PgT34IDtE2y4VBBgnTZjBc3nZ2yZ9gXIwia6cYxpzfMMiwELEf3sZyjceYE';
 const COZE_BOT_ID = '7574375637029273609';
 
 
