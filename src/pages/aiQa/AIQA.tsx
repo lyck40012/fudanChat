@@ -78,6 +78,7 @@ const AIQA = () => {
 
     // 从路由获取 botId，默认使用预问诊的 botId
     const botIdFromRoute = (location.state as { botId?: string })?.botId || '7574375637029273609';
+    const pageTitle = botIdFromRoute === '7574375637029273609' ? '病史采集小助理' : '报告解读小助手';
 
     // 创建 Coze API 客户端实例
     const cozeClient = useRef(new CozeAPI({
@@ -1269,7 +1270,7 @@ const AIQA = () => {
 
                     <div className={styles.contentWrapper}>
                         <div className={styles.topNav}>
-                            <h1>AI 智能问答</h1>
+                            <h1>{pageTitle}</h1>
                             <div className={styles.topNavStatus}>在线</div>
                         </div>
 
