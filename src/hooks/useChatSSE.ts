@@ -11,7 +11,7 @@ const formatDateTime = () => {
     return `${yyyy}${MM}${dd}_${HH}${mm}${ss}`;
 };
 
-export function useChatSSE({url, headers = {}, botId = '7574375637029273609'}) {
+export function useChatSSE({url, headers = {}, botId = '7574343526331547690'}) {
     const [messages, setMessages] = useState<any[]>([])
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)

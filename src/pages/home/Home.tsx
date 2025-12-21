@@ -6,6 +6,7 @@ import {
   DoubleRightOutlined,
 } from "@ant-design/icons";
 import  Logo from "../../static/logo.png"
+import PreC from  '../../static/pre-consultation.png'
 // 首页组件：医疗智能体风格
 export function Home() {
   const navigate = useNavigate();
@@ -66,7 +67,8 @@ export function Home() {
                   className={`${styles.card} ${styles.cardSecondary}`}
               >
                   <div className={styles.cardBorder}></div>
-                  <MessageOutlined className={styles.cardIcon} />
+                  {/*<MessageOutlined  />*/}
+                  <img src={PreC} className={styles.cardIcon} />
                   <span className={styles.cardText}>已预约医生，点击预问诊！</span>
                   <div className={styles.cardArrow}>→</div>
               </button>
