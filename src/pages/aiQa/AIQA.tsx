@@ -135,8 +135,7 @@ const AIQA = () => {
         start,
         stop,
         reset,
-        stopAudio: stopStreamAudio, // 停止服务器音频流的函数
-        resumeAudioContext // 恢复 AudioContext 的函数
+        stopAudio: stopStreamAudio // 停止服务器音频流的函数
     } = useChatSSE({
         url: `${import.meta.env.VITE_API_BASE_URL}/v3/chat`,
         botId: botIdFromRoute,
@@ -146,21 +145,6 @@ const AIQA = () => {
         checkRequirements()
         //获取麦克风设备
         getDevices();
-
-        // 在用户首次交互时恢复 AudioContext（解决自动播放限制）
-        const handleFirstInteraction = () => {
-            resumeAudioContext();
-            // 只需要执行一次，之后移除监听
-            document.removeEventListener('click', handleFirstInteraction);
-            document.removeEventListener('touchstart', handleFirstInteraction);
-        };
-        document.addEventListener('click', handleFirstInteraction);
-        document.addEventListener('touchstart', handleFirstInteraction);
-
-        return () => {
-            document.removeEventListener('click', handleFirstInteraction);
-            document.removeEventListener('touchstart', handleFirstInteraction);
-        };
     }, []);
 
     useEffect(() => {
@@ -1209,13 +1193,6 @@ const AIQA = () => {
         setSpokenMessageId(null);
         // 清空对话历史
         reset();
-
-        // 检查 voiceId 是否已加载，确保能生成音频
-        if (!voiceId) {
-            message.warning('语音音色加载中，请稍候再试...');
-            return;
-        }
-
         // 自动发送"你好"
         handleSendText('你好');
     };
@@ -1296,17 +1273,11 @@ const AIQA = () => {
         if (!question) return;
         if (initialQuestionRef.current === question) return;
 
-        // 等待 voiceId 加载完成后再发送（确保能生成音频）
-        if (!voiceId) {
-            console.log('等待 voiceId 加载完成...');
-            return;
-        }
-
         initialQuestionRef.current = question;
         setCurrentMode('text');
         setTextInput(question);
         handleSendText(question);
-    }, [location.state, voiceId]);
+    }, [location.state]);
 
     // 统一渲染输入区域：仅保留文本输入模式
     const renderInputArea = () => {

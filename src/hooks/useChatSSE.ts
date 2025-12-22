@@ -41,22 +41,6 @@ export function useChatSSE({url, headers = {}, botId = '7586122118481002502'}) {
         return audioContextRef.current
     }
 
-    // 恢复 AudioContext（在用户交互时调用）
-    const resumeAudioContext = async () => {
-        const audioContext = initAudioContext()
-        if (audioContext.state === 'suspended') {
-            try {
-                await audioContext.resume()
-                console.log('✅ AudioContext 已通过用户交互恢复')
-                return true
-            } catch (err) {
-                console.error('❌ AudioContext 恢复失败:', err)
-                return false
-            }
-        }
-        return true
-    }
-
     // 收集音频数据块（完全按照 Go 代码的方式，不做任何处理）
     const collectAudioChunk = (base64AudioStr: string) => {
         // 直接收集，不做任何清理
@@ -65,17 +49,16 @@ export function useChatSSE({url, headers = {}, botId = '7586122118481002502'}) {
     }
 
     // 参考 Go 代码的 writeWav 函数，将收集的所有音频数据合并并播放
-    const playCollectedAudio = async () => {
+    const playCollectedAudio = () => {
         console.log('====== 开始处理音频 ======')
         console.log(`总共收集 ${audioChunksRef.current.length} 个音频块`)
 
         if (audioChunksRef.current.length === 0) {
-            console.warn('⚠️ 没有音频数据可播放')
+            console.warn('没有音频数据可播放')
             return
         }
 
         try {
-            console.log('🔧 步骤1: 开始解码音频块...')
             // 参考 Go 代码: pcmData := make([]byte, 0)
             const allPcmBytes: number[] = []
             let successCount = 0
@@ -107,12 +90,10 @@ export function useChatSSE({url, headers = {}, botId = '7586122118481002502'}) {
             console.log(`合并后总字节数: ${allPcmBytes.length}`)
 
             if (allPcmBytes.length === 0) {
-                console.error('❌ 没有有效的音频数据')
+                console.error('没有有效的音频数据')
                 audioChunksRef.current = []
                 return
             }
-
-            console.log('🔧 步骤2: 转换为 PCM Int16 格式...')
 
             // 参考 Go 代码: 将字节转换为 int16 PCM 数据
             // intData = append(intData, int(uint16(pcmData[i])|uint16(pcmData[i+1])<<8))
@@ -126,38 +107,14 @@ export function useChatSSE({url, headers = {}, botId = '7586122118481002502'}) {
                 }
             }
 
-            console.log('🔧 步骤3: 归一化为 Float32 格式...')
             // 转换为 Float32Array (Web Audio API 需要)
             const float32Data = new Float32Array(pcmData.length)
             for (let i = 0; i < pcmData.length; i++) {
                 float32Data[i] = pcmData[i] / 32768.0 // 归一化到 [-1, 1]
             }
 
-            console.log('🔧 步骤4: 初始化 AudioContext...')
             // 创建 AudioContext
             const audioContext = initAudioContext()
-            console.log(`AudioContext 当前状态: ${audioContext.state}`)
-
-            // 检查 AudioContext 状态，如果是 suspended 则先 resume
-            if (audioContext.state === 'suspended') {
-                console.log('⚠️ AudioContext 处于 suspended 状态，正在恢复...')
-                try {
-                    // 尝试恢复 AudioContext，但添加超时保护
-                    await Promise.race([
-                        audioContext.resume(),
-                        new Promise((_, reject) =>
-                            setTimeout(() => reject(new Error('AudioContext resume timeout')), 3000)
-                        )
-                    ])
-                    console.log(`✅ AudioContext 已恢复为 ${audioContext.state}`)
-                } catch (err) {
-                    console.error('❌ AudioContext 恢复失败:', err)
-                    console.log('💡 提示: 需要用户交互才能播放音频，请点击页面任意位置')
-                    // 即使恢复失败，也继续尝试播放（某些浏览器可能允许）
-                }
-            }
-
-            console.log('🔧 步骤5: 创建 AudioBuffer...')
 
             // 参考 Go 代码的参数: sampleRate = 24000, bitDepth = 16, numChannels = 1
             const sampleRate = 24000
@@ -165,8 +122,8 @@ export function useChatSSE({url, headers = {}, botId = '7586122118481002502'}) {
             const audioBuffer = audioContext.createBuffer(numChannels, float32Data.length, sampleRate)
             audioBuffer.getChannelData(0).set(float32Data)
 
-            console.log(`✅ AudioBuffer 创建成功，时长: ${audioBuffer.duration.toFixed(2)} 秒`)
-            console.log('🔧 步骤6: 开始播放音频...')
+            console.log(`音频时长: ${audioBuffer.duration.toFixed(2)} 秒`)
+            console.log('开始播放音频')
 
             // 创建音频源并播放
             const source = audioContext.createBufferSource()
@@ -177,17 +134,17 @@ export function useChatSSE({url, headers = {}, botId = '7586122118481002502'}) {
             setIsAudioPlaying(true)
 
             const playStartTime = Date.now()
+            console.log(`开始播放音频，预计时长 ${audioBuffer.duration.toFixed(2)} 秒`)
 
             source.onended = () => {
                 const actualDuration = (Date.now() - playStartTime) / 1000
-                console.log(`✅ 音频播放完成，实际播放时长: ${actualDuration.toFixed(2)} 秒`)
+                console.log(`音频播放完成，实际播放时长: ${actualDuration.toFixed(2)} 秒`)
                 isPlayingAudioRef.current = false
                 setIsAudioPlaying(false)
             }
 
             source.start(0)
             audioSourceRef.current = source
-            console.log(`🎵 音频开始播放（AudioContext 状态: ${audioContext.state}）`)
 
             // 清空已播放的音频数据
             audioChunksRef.current = []
@@ -392,8 +349,6 @@ export function useChatSSE({url, headers = {}, botId = '7586122118481002502'}) {
                             // 音频流式数据 - 只收集，不播放
                             if (data.content) {
                                 collectAudioChunk(data.content)
-                            } else {
-                                console.warn('⚠️ 收到空的 audio.delta 数据')
                             }
                             break
 
@@ -403,8 +358,7 @@ export function useChatSSE({url, headers = {}, botId = '7586122118481002502'}) {
 
                         case 'conversation.chat.completed':
                             // 对话完成后播放收集的音频
-                            console.log('📢 收到 conversation.chat.completed 事件，准备播放音频')
-                            await playCollectedAudio()
+                            playCollectedAudio()
                             setLoading(false)
                             controller.abort()
                             return
@@ -455,7 +409,6 @@ export function useChatSSE({url, headers = {}, botId = '7586122118481002502'}) {
         start,
         stop,
         reset,
-        stopAudio,
-        resumeAudioContext
+        stopAudio
     }
 }
