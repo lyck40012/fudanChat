@@ -293,12 +293,17 @@ const AIQA = () => {
     }
 
     const stopSpeech = () => {
+        // 停止本地 TTS 播放
         if (audioRef.current) {
             audioRef.current.pause()
             audioRef.current.currentTime = 0
             audioRef.current = null
         }
-        // TTS 播放停止，不影响服务器音频流的 isAudioPlaying 状态
+        // 停止服务器音频流播放
+        if (isAudioPlaying) {
+            stopStreamAudio();
+            console.log('用户手动停止服务器音频流');
+        }
     }
 
     // 将文字转换为音频并上传到服务器，返回包含 file_id 的对象
@@ -400,6 +405,14 @@ const AIQA = () => {
         }
     }, [loading, isVoiceCallActive])
 
+    // 监听音频播放状态，播放完成后如果有转写内容则重新触发静默检测
+    useEffect(() => {
+        if (!isAudioPlaying && isVoiceCallActive && lastContentRef.current) {
+            console.log('音频播放完成，重新触发静默检测');
+            handleVoiceCallContentUpdate(lastContentRef.current);
+        }
+    }, [isAudioPlaying, isVoiceCallActive])
+
     const checkRequirements = async () => {
         // 检查麦克风权限
         const permission = await WsToolsUtils.checkDevicePermission();
@@ -455,10 +468,11 @@ const AIQA = () => {
                 const rms = Math.sqrt(sumSquares / rmsDataArrayRef.current.length);
                 // 简单门限，检测到明显发声时中断播报
                 const RMS_THRESHOLD = 0.06;
-                if (rms > RMS_THRESHOLD && audioRef.current && !audioRef.current.paused) {
-                    console.log('RMS 检测到用户说话，打断语音播报', rms);
-                    stopAudio();
-                }
+                // 临时禁用 RMS 打断，用于测试服务器音频流播放
+                // if (rms > RMS_THRESHOLD && audioRef.current && !audioRef.current.paused) {
+                //     console.log('RMS 检测到用户说话，打断语音播报', rms);
+                //     stopAudio();
+                // }
                 rmsRafRef.current = requestAnimationFrame(detect);
             };
             rmsRafRef.current = requestAnimationFrame(detect);
@@ -636,6 +650,12 @@ const AIQA = () => {
         // 如果图片正在上传，不触发静默检测
         if (isUploadingRef.current) {
             console.log('图片正在上传中，暂不触发自动发送');
+            return;
+        }
+
+        // 如果音频正在播放，不触发静默检测，避免打断 AI 语音
+        if (isAudioPlaying) {
+            console.log('音频正在播放中，暂不触发自动发送');
             return;
         }
 
@@ -1400,10 +1420,10 @@ const AIQA = () => {
                                                         ) : (
                                                             <div className={`${styles.messageBubble} ${styles[message.role]} ${showLoadingBubble ? styles.loadingBubble : ''}`}>
                                                                 {showLoadingBubble && <div className={styles.bubbleSpinner}></div>}
-                                                                {message.imageUrls && message.imageUrls.length > 0 && (
+                                                                {message.imageUrls && message.imageUrls.filter(url => !url.isAudio).length > 0 && (
                                                                     <div className={styles.messageImagesGrid}>
                                                                         <Image.PreviewGroup>
-                                                                            {message.imageUrls.map((url, idx) => (
+                                                                            {message.imageUrls.filter(url => !url.isAudio).map((url, idx) => (
                                                                                 <Image
                                                                                     key={idx}
                                                                                     src={getFilePreviewUrl(url)}
@@ -1427,10 +1447,10 @@ const AIQA = () => {
                                 </div>
 
                                 <div className={styles.statusBar}>
-                                    {/* 文件列表显示区域 - 统一渲染，不重复 */}
-                                    {fileList.length > 0 && (
+                                    {/* 文件列表显示区域 - 统一渲染，不重复（不显示音频文件） */}
+                                    {fileList.filter(file => !file.isAudio).length > 0 && (
                                         <div className={styles.fileListContainer}>
-                                            {fileList.map((file) => (
+                                            {fileList.filter(file => !file.isAudio).map((file) => (
                                                 <div key={file.uid} className={styles.fileItem}>
                                                     {isImageFile(file) ? (
                                                         <Image

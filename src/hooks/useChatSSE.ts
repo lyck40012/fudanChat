@@ -43,62 +43,54 @@ export function useChatSSE({url, headers = {}, botId = '7586122118481002502'}) {
 
     // 收集音频数据块（完全按照 Go 代码的方式，不做任何处理）
     const collectAudioChunk = (base64AudioStr: string) => {
-        console.log('🎵 收集音频数据块')
-        console.log('  - 类型:', typeof base64AudioStr)
-        console.log('  - 长度:', base64AudioStr?.length)
-        console.log('  - 前50字符:', base64AudioStr?.substring(0, 50))
-
         // 直接收集，不做任何清理
         audioChunksRef.current.push(base64AudioStr)
-        console.log('  - 当前总块数:', audioChunksRef.current.length)
+        console.log(`收集音频块 #${audioChunksRef.current.length}，长度: ${base64AudioStr?.length}`)
     }
 
     // 参考 Go 代码的 writeWav 函数，将收集的所有音频数据合并并播放
     const playCollectedAudio = () => {
-        console.log('\n====== 开始处理音频 ======')
-        console.log('收集到的数据块数量:', audioChunksRef.current.length)
+        console.log('====== 开始处理音频 ======')
+        console.log(`总共收集 ${audioChunksRef.current.length} 个音频块`)
 
         if (audioChunksRef.current.length === 0) {
-            console.log('⚠️ 没有音频数据可播放')
+            console.warn('没有音频数据可播放')
             return
         }
 
         try {
             // 参考 Go 代码: pcmData := make([]byte, 0)
             const allPcmBytes: number[] = []
+            let successCount = 0
+            let failCount = 0
 
             // 参考 Go 代码: 逐个解码 base64 字符串并合并字节
             for (let i = 0; i < audioChunksRef.current.length; i++) {
                 const base64AudioStr = audioChunksRef.current[i]
 
-                console.log(`\n处理第 ${i + 1}/${audioChunksRef.current.length} 个数据块:`)
-                console.log('  - Base64 长度:', base64AudioStr.length)
-
                 try {
                     // 参考 Go 代码: base64.StdEncoding.DecodeString(base64AudioStr.(string))
-                    // 使用 atob 解码 base64
                     const binaryString = atob(base64AudioStr)
-                    console.log('  - 解码后字节长度:', binaryString.length)
 
                     // 将二进制字符串转换为字节数组
                     for (let j = 0; j < binaryString.length; j++) {
                         allPcmBytes.push(binaryString.charCodeAt(j))
                     }
 
-                    console.log('  - ✅ 成功解码')
+                    successCount++
                 } catch (decodeError) {
-                    console.error(`  - ❌ 第 ${i + 1} 块解码失败:`, decodeError)
-                    console.error('  - Base64 内容前200字符:', base64AudioStr.substring(0, 200))
+                    console.error(`音频块 #${i + 1} 解码失败:`, decodeError)
+                    failCount++
                     // 跳过这个块，继续处理下一个
                     continue
                 }
             }
 
-            console.log('\n所有数据块处理完成:')
-            console.log('  - 合并后总字节数:', allPcmBytes.length)
+            console.log(`解码结果: 成功 ${successCount}/${audioChunksRef.current.length}，失败 ${failCount}`)
+            console.log(`合并后总字节数: ${allPcmBytes.length}`)
 
             if (allPcmBytes.length === 0) {
-                console.error('❌ 没有有效的音频数据')
+                console.error('没有有效的音频数据')
                 audioChunksRef.current = []
                 return
             }
@@ -115,15 +107,11 @@ export function useChatSSE({url, headers = {}, botId = '7586122118481002502'}) {
                 }
             }
 
-            console.log('  - PCM 样本数:', pcmData.length)
-
             // 转换为 Float32Array (Web Audio API 需要)
             const float32Data = new Float32Array(pcmData.length)
             for (let i = 0; i < pcmData.length; i++) {
                 float32Data[i] = pcmData[i] / 32768.0 // 归一化到 [-1, 1]
             }
-
-            console.log('  - Float32 样本数:', float32Data.length)
 
             // 创建 AudioContext
             const audioContext = initAudioContext()
@@ -134,7 +122,8 @@ export function useChatSSE({url, headers = {}, botId = '7586122118481002502'}) {
             const audioBuffer = audioContext.createBuffer(numChannels, float32Data.length, sampleRate)
             audioBuffer.getChannelData(0).set(float32Data)
 
-            console.log('  - 音频时长:', audioBuffer.duration.toFixed(2), '秒')
+            console.log(`音频时长: ${audioBuffer.duration.toFixed(2)} 秒`)
+            console.log('开始播放音频')
 
             // 创建音频源并播放
             const source = audioContext.createBufferSource()
@@ -144,8 +133,12 @@ export function useChatSSE({url, headers = {}, botId = '7586122118481002502'}) {
             isPlayingAudioRef.current = true
             setIsAudioPlaying(true)
 
+            const playStartTime = Date.now()
+            console.log(`开始播放音频，预计时长 ${audioBuffer.duration.toFixed(2)} 秒`)
+
             source.onended = () => {
-                console.log('🎵 音频播放完成\n')
+                const actualDuration = (Date.now() - playStartTime) / 1000
+                console.log(`音频播放完成，实际播放时长: ${actualDuration.toFixed(2)} 秒`)
                 isPlayingAudioRef.current = false
                 setIsAudioPlaying(false)
             }
@@ -153,16 +146,11 @@ export function useChatSSE({url, headers = {}, botId = '7586122118481002502'}) {
             source.start(0)
             audioSourceRef.current = source
 
-            console.log('🎵 开始播放音频\n')
-            console.log('====== 音频处理完成 ======\n')
-
             // 清空已播放的音频数据
             audioChunksRef.current = []
 
         } catch (error) {
-            console.error('\n❌ 音频播放失败:', error)
-            console.error('错误详情:', (error as Error).message)
-            console.error('错误堆栈:', (error as Error).stack)
+            console.error('音频播放失败:', error)
             isPlayingAudioRef.current = false
             setIsAudioPlaying(false)
             audioChunksRef.current = []
@@ -171,13 +159,18 @@ export function useChatSSE({url, headers = {}, botId = '7586122118481002502'}) {
 
     // 停止音频播放
     const stopAudio = () => {
+        const wasPlaying = isPlayingAudioRef.current
         if (audioSourceRef.current) {
             try {
                 audioSourceRef.current.stop()
+                console.log('⚠️ 音频播放被手动停止')
             } catch (e) {
                 // 忽略已经停止的错误
             }
             audioSourceRef.current = null
+        }
+        if (wasPlaying) {
+            console.log('⚠️ 清空音频播放状态（播放未完成）')
         }
         audioChunksRef.current = [] // 清空收集的音频数据
         isPlayingAudioRef.current = false
@@ -267,14 +260,6 @@ export function useChatSSE({url, headers = {}, botId = '7586122118481002502'}) {
             }
         }
 
-        console.log('🚀 发送请求到 /v3/chat:', {
-            url: requestUrl,
-            body: requestBody,
-            messageContent: requestMessageArr.length > 0 && requestMessageArr[0].content_type === 'object_string'
-                ? JSON.parse(requestMessageArr[0].content)
-                : requestMessageArr
-        })
-
         try {
             const response = await fetch(requestUrl, {
                 method: 'POST',
@@ -290,12 +275,7 @@ export function useChatSSE({url, headers = {}, botId = '7586122118481002502'}) {
             // 检查响应状态
             if (!response.ok) {
                 const errorText = await response.text()
-                console.error('❌ 请求失败:', {
-                    status: response.status,
-                    statusText: response.statusText,
-                    errorBody: errorText,
-                    requestBody: requestBody
-                })
+                console.error('请求失败:', response.status, errorText)
                 try {
                     const errorJson = JSON.parse(errorText)
                     setError(errorJson.msg || `请求失败: ${response.status}`)
@@ -343,8 +323,6 @@ export function useChatSSE({url, headers = {}, botId = '7586122118481002502'}) {
             isConversationRef.current = true
         }
 
-                    console.log('📨 收到 SSE 事件:', { event, data })
-
                     switch (event) {
                         case 'conversation.chat.created':
                             chatIdRef.current = data.id
@@ -369,54 +347,8 @@ export function useChatSSE({url, headers = {}, botId = '7586122118481002502'}) {
 
                         case 'conversation.audio.delta':
                             // 音频流式数据 - 只收集，不播放
-                            console.log('📨 收到 audio.delta 事件，完整 data:', JSON.stringify(data, null, 2))
-                            console.log('📨 data 的所有键:', Object.keys(data))
-
-                            // 尝试多个可能的字段名
-                            let audioData = null
-
-                            // 优先尝试常见字段
                             if (data.content) {
-                                console.log('📨 data.content 类型:', typeof data.content)
-                                console.log('📨 data.content 值:', data.content)
-                                audioData = data.content
-                            } else if (data.audio) {
-                                console.log('📨 data.audio 类型:', typeof data.audio)
-                                console.log('📨 data.audio 值:', data.audio)
-                                audioData = data.audio
-                            } else if (data.delta) {
-                                console.log('📨 data.delta 类型:', typeof data.delta)
-                                console.log('📨 data.delta 值:', data.delta)
-                                audioData = data.delta
-                            }
-
-                            if (audioData) {
-                                // 如果是对象，尝试提取 base64 字符串
-                                if (typeof audioData === 'object') {
-                                    console.log('📨 audioData 是对象，尝试提取 base64 字符串')
-                                    console.log('📨 audioData 的键:', Object.keys(audioData))
-
-                                    // 尝试常见的 base64 字段名
-                                    if (audioData.content) {
-                                        audioData = audioData.content
-                                    } else if (audioData.data) {
-                                        audioData = audioData.data
-                                    } else if (audioData.audio) {
-                                        audioData = audioData.audio
-                                    } else {
-                                        console.error('❌ 无法从对象中提取 base64 字符串')
-                                        console.error('audioData 完整内容:', JSON.stringify(audioData))
-                                    }
-                                }
-
-                                // 确保是字符串
-                                if (typeof audioData === 'string') {
-                                    collectAudioChunk(audioData)
-                                } else {
-                                    console.error('❌ audioData 不是字符串类型:', typeof audioData)
-                                }
-                            } else {
-                                console.warn('⚠️ audio.delta 事件中没有找到音频数据')
+                                collectAudioChunk(data.content)
                             }
                             break
 
@@ -425,7 +357,6 @@ export function useChatSSE({url, headers = {}, botId = '7586122118481002502'}) {
                             break
 
                         case 'conversation.chat.completed':
-                            console.log('✅ 对话完成，开始播放收集的音频')
                             // 对话完成后播放收集的音频
                             playCollectedAudio()
                             setLoading(false)
@@ -439,7 +370,6 @@ export function useChatSSE({url, headers = {}, botId = '7586122118481002502'}) {
                             return
 
                         default:
-                            console.log('⚠️ 未处理的事件类型:', event)
                             break
                     }
                 }
