@@ -28,7 +28,6 @@ export function useChatSSE({url, headers = {}, botId = '7586122118481002502'}) {
     const audioBuffersRef = useRef<AudioBuffer[]>([])
     const audioSourceRef = useRef<AudioBufferSourceNode | null>(null)
     const isPlayingAudioRef = useRef(false)
-    const audioChunksRef = useRef<string[]>([]) // 收集原始 base64 字符串（不做任何处理）
     const nextPlayTimeRef = useRef(0)
 
     // 初始化 AudioContext
@@ -41,119 +40,92 @@ export function useChatSSE({url, headers = {}, botId = '7586122118481002502'}) {
         return audioContextRef.current
     }
 
-    // 收集音频数据块（完全按照 Go 代码的方式，不做任何处理）
-    const collectAudioChunk = (base64AudioStr: string) => {
-        // 直接收集，不做任何清理
-        audioChunksRef.current.push(base64AudioStr)
-        console.log(`收集音频块 #${audioChunksRef.current.length}，长度: ${base64AudioStr?.length}`)
-    }
-
-    // 参考 Go 代码的 writeWav 函数，将收集的所有音频数据合并并播放
-    const playCollectedAudio = () => {
-        console.log('====== 开始处理音频 ======')
-        console.log(`总共收集 ${audioChunksRef.current.length} 个音频块`)
-
-        if (audioChunksRef.current.length === 0) {
-            console.warn('没有音频数据可播放')
-            return
-        }
-
+    // 实时播放音频数据块
+    const playAudioChunkRealtime = async (base64AudioStr: string) => {
         try {
-            // 参考 Go 代码: pcmData := make([]byte, 0)
-            const allPcmBytes: number[] = []
-            let successCount = 0
-            let failCount = 0
+            console.log(`🎵 收到音频块，长度: ${base64AudioStr?.length}`)
 
-            // 参考 Go 代码: 逐个解码 base64 字符串并合并字节
-            for (let i = 0; i < audioChunksRef.current.length; i++) {
-                const base64AudioStr = audioChunksRef.current[i]
+            // 解码 base64
+            const binaryString = atob(base64AudioStr)
+            const pcmBytes: number[] = []
 
-                try {
-                    // 参考 Go 代码: base64.StdEncoding.DecodeString(base64AudioStr.(string))
-                    const binaryString = atob(base64AudioStr)
+            for (let j = 0; j < binaryString.length; j++) {
+                pcmBytes.push(binaryString.charCodeAt(j))
+            }
 
-                    // 将二进制字符串转换为字节数组
-                    for (let j = 0; j < binaryString.length; j++) {
-                        allPcmBytes.push(binaryString.charCodeAt(j))
-                    }
-
-                    successCount++
-                } catch (decodeError) {
-                    console.error(`音频块 #${i + 1} 解码失败:`, decodeError)
-                    failCount++
-                    // 跳过这个块，继续处理下一个
-                    continue
+            // 转换为 int16 PCM 数据
+            const pcmData = new Int16Array(pcmBytes.length / 2)
+            for (let i = 0; i < pcmBytes.length; i += 2) {
+                if (i + 1 < pcmBytes.length) {
+                    const low = pcmBytes[i]
+                    const high = pcmBytes[i + 1]
+                    pcmData[i / 2] = (low | (high << 8)) << 16 >> 16
                 }
             }
 
-            console.log(`解码结果: 成功 ${successCount}/${audioChunksRef.current.length}，失败 ${failCount}`)
-            console.log(`合并后总字节数: ${allPcmBytes.length}`)
-
-            if (allPcmBytes.length === 0) {
-                console.error('没有有效的音频数据')
-                audioChunksRef.current = []
-                return
-            }
-
-            // 参考 Go 代码: 将字节转换为 int16 PCM 数据
-            // intData = append(intData, int(uint16(pcmData[i])|uint16(pcmData[i+1])<<8))
-            const pcmData = new Int16Array(allPcmBytes.length / 2)
-            for (let i = 0; i < allPcmBytes.length; i += 2) {
-                if (i + 1 < allPcmBytes.length) {
-                    // 小端序: 低字节在前，高字节在后
-                    const low = allPcmBytes[i]
-                    const high = allPcmBytes[i + 1]
-                    pcmData[i / 2] = (low | (high << 8)) << 16 >> 16 // 转为有符号 int16
-                }
-            }
-
-            // 转换为 Float32Array (Web Audio API 需要)
+            // 转换为 Float32Array
             const float32Data = new Float32Array(pcmData.length)
             for (let i = 0; i < pcmData.length; i++) {
-                float32Data[i] = pcmData[i] / 32768.0 // 归一化到 [-1, 1]
+                float32Data[i] = pcmData[i] / 32768.0
             }
 
-            // 创建 AudioContext
+            // 初始化 AudioContext
             const audioContext = initAudioContext()
 
-            // 参考 Go 代码的参数: sampleRate = 24000, bitDepth = 16, numChannels = 1
+            // 创建 AudioBuffer
             const sampleRate = 24000
             const numChannels = 1
             const audioBuffer = audioContext.createBuffer(numChannels, float32Data.length, sampleRate)
             audioBuffer.getChannelData(0).set(float32Data)
 
-            console.log(`音频时长: ${audioBuffer.duration.toFixed(2)} 秒`)
-            console.log('开始播放音频')
-
-            // 创建音频源并播放
+            // 创建音频源
             const source = audioContext.createBufferSource()
             source.buffer = audioBuffer
             source.connect(audioContext.destination)
 
-            isPlayingAudioRef.current = true
-            setIsAudioPlaying(true)
+            // 计算播放时间
+            const currentTime = audioContext.currentTime
+            const startTime = Math.max(currentTime, nextPlayTimeRef.current)
 
-            const playStartTime = Date.now()
-            console.log(`开始播放音频，预计时长 ${audioBuffer.duration.toFixed(2)} 秒`)
-
-            source.onended = () => {
-                const actualDuration = (Date.now() - playStartTime) / 1000
-                console.log(`音频播放完成，实际播放时长: ${actualDuration.toFixed(2)} 秒`)
-                isPlayingAudioRef.current = false
-                setIsAudioPlaying(false)
+            // 第一个音频块
+            if (!isPlayingAudioRef.current) {
+                console.log(`🎵 开始播放第一个音频块，时长: ${audioBuffer.duration.toFixed(3)} 秒`)
+                isPlayingAudioRef.current = true
+                setIsAudioPlaying(true)
+                nextPlayTimeRef.current = currentTime + audioBuffer.duration
+            } else {
+                console.log(`🎵 连续播放音频块，时长: ${audioBuffer.duration.toFixed(3)} 秒，调度时间: ${(startTime - currentTime).toFixed(3)} 秒后`)
+                nextPlayTimeRef.current = startTime + audioBuffer.duration
             }
 
-            source.start(0)
+            // 播放
+            source.start(startTime)
             audioSourceRef.current = source
 
-            // 清空已播放的音频数据
-            audioChunksRef.current = []
+            // 监听播放结束
+            source.onended = () => {
+                console.log('🎵 音频块播放完成')
+            }
 
         } catch (error) {
-            console.error('音频播放失败:', error)
-            isPlayingAudioRef.current = false
-            setIsAudioPlaying(false)
-            audioChunksRef.current = []
+            console.error('❌ 音频块播放失败:', error)
+        }
+    }
+
+    // 完成音频播放
+    const finishAudioPlayback = () => {
+        // 等待所有音频块播放完成
+        const audioContext = audioContextRef.current
+        if (audioContext && isPlayingAudioRef.current) {
+            const waitTime = Math.max(0, nextPlayTimeRef.current - audioContext.currentTime)
+            console.log(`🎵 等待最后的音频块播放完成，剩余时间: ${waitTime.toFixed(3)} 秒`)
+
+            setTimeout(() => {
+                console.log('🎵 所有音频播放完成')
+                isPlayingAudioRef.current = false
+                setIsAudioPlaying(false)
+                nextPlayTimeRef.current = 0
+            }, waitTime * 1000)
         }
     }
 
@@ -172,7 +144,6 @@ export function useChatSSE({url, headers = {}, botId = '7586122118481002502'}) {
         if (wasPlaying) {
             console.log('⚠️ 清空音频播放状态（播放未完成）')
         }
-        audioChunksRef.current = [] // 清空收集的音频数据
         isPlayingAudioRef.current = false
         setIsAudioPlaying(false)
         nextPlayTimeRef.current = 0
@@ -346,9 +317,9 @@ export function useChatSSE({url, headers = {}, botId = '7586122118481002502'}) {
                             break
 
                         case 'conversation.audio.delta':
-                            // 音频流式数据 - 只收集，不播放
+                            // 音频流式数据 - 实时播放
                             if (data.content) {
-                                collectAudioChunk(data.content)
+                                playAudioChunkRealtime(data.content)
                             }
                             break
 
@@ -357,8 +328,8 @@ export function useChatSSE({url, headers = {}, botId = '7586122118481002502'}) {
                             break
 
                         case 'conversation.chat.completed':
-                            // 对话完成后播放收集的音频
-                            playCollectedAudio()
+                            // 对话完成后，确保所有音频播放完成
+                            finishAudioPlayback()
                             setLoading(false)
                             controller.abort()
                             return
