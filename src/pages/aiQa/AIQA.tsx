@@ -705,7 +705,7 @@ const AIQA = () => {
                 imageUrls: filesSnapshot.length > 0 ? filesSnapshot : undefined
             };
             console.log('实时通话发送消息:', messageToSend, filesSnapshot);
-
+            setFileList([]);
             await start(messageToSend, {
                 prepareFiles: async () => {
                     const attachments = [...filesSnapshot];
@@ -729,7 +729,7 @@ const AIQA = () => {
             });
             console.log('消息发送完成');
 
-            setFileList([]);
+
             recognizeResult.current = {} as Message;
             lastContentRef.current = '';
             console.log("lastContentRef.current", lastContentRef.current);
@@ -844,6 +844,8 @@ const AIQA = () => {
                     };
 
                     console.log('准备发送的消息:', messageWithImages);
+                    // 发送后清空文件列表和识别结果
+                    setFileList([]);
                     await start(messageWithImages, {
                         prepareFiles: async () => {
                             const attachments = [...filesSnapshot];
@@ -868,8 +870,7 @@ const AIQA = () => {
                     });
                     console.log('消息发送完成');
 
-                    // 发送后清空文件列表和识别结果
-                    setFileList([]);
+
                     recognizeResult.current = {}
                 } catch (error) {
                     console.error('按住说话发送失败:', error);
@@ -1030,6 +1031,8 @@ const AIQA = () => {
                     filesSnapshot
                 );
                 console.log('准备发送的消息:', messageWithImages);
+                // 发送后清空文件列表和识别结果
+                setFileList([]);
                 await start(messageWithImages, {
                     prepareFiles: async () => {
                         const attachments = [...filesSnapshot];
@@ -1053,8 +1056,7 @@ const AIQA = () => {
                 });
                 console.log('消息发送完成');
 
-                // 发送后清空文件列表和识别结果
-                setFileList([]);
+
                 recognizeResult.current = {} as Message;
             } catch (error) {
                 console.error('按住说话发送失败:', error);

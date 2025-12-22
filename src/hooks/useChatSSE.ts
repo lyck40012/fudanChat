@@ -195,12 +195,12 @@ export function useChatSSE({url, headers = {}, botId = '7586122118481002502'}) {
         ])
 
         // ✅ 3. 等待附件准备（上传音频/图片）
-        let resolvedFiles = userMessage?.imageUrls || []
+        let resolvedFiles: any[] = []
         if (options?.prepareFiles) {
             try {
-                const extraFiles = await options.prepareFiles()
-                if (Array.isArray(extraFiles)) {
-                    resolvedFiles = [...resolvedFiles, ...extraFiles.filter(Boolean)]
+                const prepared = await options.prepareFiles()
+                if (Array.isArray(prepared)) {
+                    resolvedFiles = prepared.filter(Boolean)
                 }
             } catch (err) {
                 console.error('附件准备失败', err)
@@ -209,7 +209,19 @@ export function useChatSSE({url, headers = {}, botId = '7586122118481002502'}) {
                 controller.abort()
                 return
             }
+        } else {
+            resolvedFiles = userMessage?.imageUrls || []
         }
+
+        // 简单去重：优先使用 response.id 其次 uid/name
+        const seen = new Set<string>()
+        resolvedFiles = resolvedFiles.filter(f => {
+            const key = f?.response?.id || f?.uid || f?.name
+            if (!key) return true
+            if (seen.has(key)) return false
+            seen.add(key)
+            return true
+        })
 
         // 始终使用 object_string 格式
         let requestMessageArr = []
@@ -219,7 +231,7 @@ export function useChatSSE({url, headers = {}, botId = '7586122118481002502'}) {
             type: 'text',
             text: userMessage?.content || '',
         }]
-
+        console.log("resolvedFiles============>",resolvedFiles)
         // 如果有附件（图片或音频），追加到数组中
         if (resolvedFiles && resolvedFiles.length) {
             resolvedFiles.forEach(x => {
