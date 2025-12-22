@@ -108,6 +108,7 @@ const AIQA = () => {
     const rmsDataArrayRef = useRef<Uint8Array | null>(null);
     const rmsRafRef = useRef<number | null>(null);
     const initialQuestionRef = useRef<string | null>(null);
+    const initialQuestionSentRef = useRef<boolean>(false);
     const [spokenMessageId, setSpokenMessageId] = useState<string | number | null>(null);
     const [voiceId, setVoiceId] = useState<string>('');
     // 注意：isAudioPlaying 现在从 useChatSSE 获取，用于服务器音频流
@@ -1496,7 +1497,7 @@ const AIQA = () => {
     };
 
 
-    // 处理从首页预设问题跳转时自动提问
+    // 处理从首页预设问题跳转时自动提问（等待音色加载后再发送）
     useEffect(() => {
         const state = location.state as { initialQuestion?: string } | undefined;
         const rawQuestion = state?.initialQuestion;
@@ -1511,13 +1512,27 @@ const AIQA = () => {
 
         const question = rawQuestion.trim();
         if (!question) return;
-        if (initialQuestionRef.current === question) return;
 
-        initialQuestionRef.current = question;
+        // 如果路由问题变更，重置发送标记
+        if (initialQuestionRef.current !== question) {
+            initialQuestionRef.current = question;
+            initialQuestionSentRef.current = false;
+        }
+
+        // 已发送则不重复
+        if (initialQuestionSentRef.current) return;
+
+        // 无音色时先等待，确保首条消息也能先生成并上传音频
+        if (!voiceId) {
+            console.log('等待音色加载后再发送首条自动消息');
+            return;
+        }
+
+        initialQuestionSentRef.current = true;
         setCurrentMode('text');
         setTextInput(question);
         handleSendText(question);
-    }, [location.state]);
+    }, [location.state, voiceId]);
 
     // 统一渲染输入区域：仅保留文本输入模式
     const renderInputArea = () => {
