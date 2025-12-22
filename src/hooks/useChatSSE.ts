@@ -29,6 +29,7 @@ export function useChatSSE({url, headers = {}, botId = '7586122118481002502'}) {
     const audioSourceRef = useRef<AudioBufferSourceNode | null>(null)
     const isPlayingAudioRef = useRef(false)
     const nextPlayTimeRef = useRef(0)
+    const isAudioStoppedByUserRef = useRef(false) // 标记用户是否手动停止了播放
 
     // 初始化 AudioContext
     const initAudioContext = () => {
@@ -42,6 +43,12 @@ export function useChatSSE({url, headers = {}, botId = '7586122118481002502'}) {
 
     // 实时播放音频数据块
     const playAudioChunkRealtime = async (base64AudioStr: string) => {
+        // 如果用户已手动停止播放，则不再播放新的音频块
+        if (isAudioStoppedByUserRef.current) {
+            console.log('⏸️ 用户已停止播放，忽略新的音频块')
+            return
+        }
+
         try {
             console.log(`🎵 收到音频块，长度: ${base64AudioStr?.length}`)
 
@@ -132,6 +139,11 @@ export function useChatSSE({url, headers = {}, botId = '7586122118481002502'}) {
     // 停止音频播放
     const stopAudio = () => {
         const wasPlaying = isPlayingAudioRef.current
+
+        // 标记用户已手动停止播放，阻止新的音频块播放
+        isAudioStoppedByUserRef.current = true
+        console.log('⏸️ 用户手动停止播放，已设置阻止标志')
+
         if (audioSourceRef.current) {
             try {
                 audioSourceRef.current.stop()
@@ -157,6 +169,10 @@ export function useChatSSE({url, headers = {}, botId = '7586122118481002502'}) {
 
         // 停止之前的音频播放并清空音频数据
         stopAudio()
+
+        // 重置手动停止标志，允许新对话的音频播放
+        isAudioStoppedByUserRef.current = false
+        console.log('🔄 开始新对话，重置音频停止标志')
 
         setLoading(true)
         setError(null)
@@ -362,6 +378,7 @@ export function useChatSSE({url, headers = {}, botId = '7586122118481002502'}) {
     const reset = useCallback(() => {
         controllerRef.current?.abort()
         stopAudio() // 停止音频播放
+        isAudioStoppedByUserRef.current = false // 重置停止标志
         setMessages([])
         setLoading(false)
         setError(null)

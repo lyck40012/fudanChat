@@ -315,19 +315,7 @@ const AIQA = () => {
         }
     }
 
-    const stopSpeech = () => {
-        // 停止本地 TTS 播放
-        if (audioRef.current) {
-            audioRef.current.pause()
-            audioRef.current.currentTime = 0
-            audioRef.current = null
-        }
-        // 停止服务器音频流播放
-        if (isAudioPlaying) {
-            stopStreamAudio();
-            console.log('用户手动停止服务器音频流');
-        }
-    }
+
 
     // 将文字转换为音频并上传到服务器，返回包含 file_id 的对象
     const convertTextToAudioAndUpload = async (text: string) => {
@@ -492,10 +480,10 @@ const AIQA = () => {
                 // 简单门限，检测到明显发声时中断播报
                 const RMS_THRESHOLD = 0.06;
                 // 临时禁用 RMS 打断，用于测试服务器音频流播放
-                // if (rms > RMS_THRESHOLD && audioRef.current && !audioRef.current.paused) {
-                //     console.log('RMS 检测到用户说话，打断语音播报', rms);
-                //     stopAudio();
-                // }
+                if (rms > RMS_THRESHOLD && audioRef.current && !audioRef.current.paused) {
+                    console.log('RMS 检测到用户说话，打断语音播报', rms);
+                    stopAudio();
+                }
                 rmsRafRef.current = requestAnimationFrame(detect);
             };
             rmsRafRef.current = requestAnimationFrame(detect);
@@ -1390,8 +1378,7 @@ const AIQA = () => {
             audioRef.current.currentTime = 0;
             audioRef.current = null;
         }
-        // 注意：TTS 播放停止，不影响服务器音频流的 isAudioPlaying 状态
-        // 如果需要停止服务器音频流，请调用 stopStreamAudio()
+        stopStreamAudio()
         // 终止正在进行的 TTS 请求
         if (speechAbortRef.current) {
             speechAbortRef.current.abort();
@@ -1403,8 +1390,6 @@ const AIQA = () => {
     const handleNewConversation = () => {
         // 停止 TTS 音频播放
         stopAudio();
-        // 停止服务器音频流播放
-        stopStreamAudio();
         // 停止语音通话
         if (isVoiceCallActive) {
             stopVoiceCall();
@@ -1805,7 +1790,7 @@ const AIQA = () => {
                                     </button>
 
                                     <button
-                                        onClick={stopSpeech}
+                                        onClick={stopAudio}
                                         className={`${styles.toolbarButton} ${styles.stopAudioToolbar}`}
                                         disabled={!isAudioPlaying}
                                     >
