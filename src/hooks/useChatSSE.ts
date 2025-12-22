@@ -25,7 +25,6 @@ export function useChatSSE({url, headers = {}, botId = '7586122118481002502'}) {
 
     // 音频相关的 refs
     const audioContextRef = useRef<AudioContext | null>(null)
-    const audioBuffersRef = useRef<AudioBuffer[]>([])
     const audioSourceRef = useRef<AudioBufferSourceNode | null>(null)
     const isPlayingAudioRef = useRef(false)
     const nextPlayTimeRef = useRef(0)

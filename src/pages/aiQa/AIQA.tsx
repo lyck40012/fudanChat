@@ -1,6 +1,6 @@
 import React, {useState, useRef, useEffect} from 'react';
 import {useNavigate, useLocation} from 'react-router-dom';
-import {Home, Mic, Camera, Keyboard, User, Bot, Send, StopCircle, Volume1, Volume2, FileUp, MessageSquarePlus, Phone, PhoneOff} from 'lucide-react';
+import {Home, Mic, Camera, User, Bot, Send, StopCircle, Volume1, Volume2, FileUp, MessageSquarePlus, Phone, PhoneOff} from 'lucide-react';
 import {message, Upload, Image, Typography, Slider} from 'antd';
 import {CloseCircleFilled, FileTextOutlined} from '@ant-design/icons';
 import type {UploadFile, UploadProps} from 'antd';
@@ -94,7 +94,6 @@ const AIQA = () => {
     const fileListRef = useRef<UploadFile[]>([]); // 使用 ref 解决闭包问题
     const pressStartTimeRef = useRef<number | null>(null);
     const [selectedInputDevice, setSelectedInputDevice] = useState<string>('');
-    const [hasPermission, setHasPermission] = useState<boolean | null>(null);
     const [denoiserSupported, setDenoiserSupported] = useState<boolean>(false);
     const [cameraModalVisible, setCameraModalVisible] = useState(false);
     const clientRef = useRef<WsTranscriptionClient>();
@@ -109,7 +108,6 @@ const AIQA = () => {
     const rmsRafRef = useRef<number | null>(null);
     const initialQuestionRef = useRef<string | null>(null);
     const initialQuestionSentRef = useRef<boolean>(false);
-    const [spokenMessageId, setSpokenMessageId] = useState<string | number | null>(null);
     const [voiceId, setVoiceId] = useState<string>('');
     // 注意：isAudioPlaying 现在从 useChatSSE 获取，用于服务器音频流
     const [audioVolume, setAudioVolume] = useState<number>(80);
@@ -118,11 +116,7 @@ const AIQA = () => {
     // 触摸手势相关状态
     const [showMask, setShowMask] = useState(false); // 是否显示遮罩层
     const [touchStartX, setTouchStartX] = useState<number>(0); // 触摸起始X坐标
-    const [touchStartY, setTouchStartY] = useState<number>(0); // 触摸起始Y坐标
-    const [currentTouchX, setCurrentTouchX] = useState<number>(0); // 当前触摸X坐标
-    const [currentTouchY, setCurrentTouchY] = useState<number>(0); // 当前触摸Y坐标
     const [isCanceling, setIsCanceling] = useState(false); // 是否在取消区域
-    const [isMouseDown, setIsMouseDown] = useState(false); // 鼠标是否按下
     // 语音通话相关状态
     const [isVoiceCallActive, setIsVoiceCallActive] = useState(false); // 是否处于语音通话模式
     const isVoiceCallActiveRef = useRef(false); // 使用 ref 解决闭包问题
@@ -386,16 +380,6 @@ const AIQA = () => {
         }
     }
 
-    // 对话结束后自动播报最后一条 AI 回复
-    // 注意：现在使用服务器返回的音频流（conversation.audio.delta），不再需要 TTS 接口
-    // useEffect(() => {
-    //     if (loading) return
-    //     const lastAi = [...messages].reverse().find(m => m.role === 'ai' && m.content?.trim())
-    //     if (!lastAi) return
-    //     if (spokenMessageId === lastAi.id) return
-    //     playSpeech(lastAi.content)
-    //     setSpokenMessageId(lastAi.id)
-    // }, [messages, loading, voiceId])
 
     // 监听 loading 状态变化，在语音通话模式下 AI 回答完成后自动重新开始录音
     useEffect(() => {
@@ -425,9 +409,6 @@ const AIQA = () => {
     }, [isAudioPlaying, isVoiceCallActive])
 
     const checkRequirements = async () => {
-        // 检查麦克风权限
-        const permission = await WsToolsUtils.checkDevicePermission();
-        setHasPermission(permission.audio);
 
         // 检查是否支持AI降噪
         const isDenoiserSupported = WsToolsUtils.checkDenoiserSupport();
@@ -1087,9 +1068,6 @@ const AIQA = () => {
         e.preventDefault();
         const touch = e.touches[0];
         setTouchStartX(touch.clientX);
-        setTouchStartY(touch.clientY);
-        setCurrentTouchX(touch.clientX);
-        setCurrentTouchY(touch.clientY);
         setShowMask(true);
         setIsCanceling(false);
         startRecording();
@@ -1098,8 +1076,6 @@ const AIQA = () => {
     const handleVoiceTouchMove = (e: React.TouchEvent) => {
         e.preventDefault();
         const touch = e.touches[0];
-        setCurrentTouchX(touch.clientX);
-        setCurrentTouchY(touch.clientY);
 
         // 计算滑动距离，向左滑动为负值
         const distance = touchStartX - touch.clientX;
@@ -1111,7 +1087,6 @@ const AIQA = () => {
     const handleVoiceTouchEnd = (e: React.TouchEvent) => {
         e.preventDefault();
         setShowMask(false);
-        setIsMouseDown(false);
 
         // 立即重置录音状态到 idle，让UI马上恢复
         setVoiceStatus('idle');
@@ -1137,19 +1112,12 @@ const AIQA = () => {
         }
 
         setTouchStartX(0);
-        setTouchStartY(0);
-        setCurrentTouchX(0);
-        setCurrentTouchY(0);
     };
 
     // 鼠标手势处理函数
     const handleVoiceMouseDown = (e: React.MouseEvent) => {
         e.preventDefault();
-        setIsMouseDown(true);
         setTouchStartX(e.clientX);
-        setTouchStartY(e.clientY);
-        setCurrentTouchX(e.clientX);
-        setCurrentTouchY(e.clientY);
         setShowMask(true);
         setIsCanceling(false);
         startRecording();
@@ -1161,8 +1129,6 @@ const AIQA = () => {
         // 在 document 上添加事件监听，这样即使鼠标移出元素也能监听到
         const handleDocumentMouseMove = (e: MouseEvent) => {
             e.preventDefault();
-            setCurrentTouchX(e.clientX);
-            setCurrentTouchY(e.clientY);
 
             // 计算滑动距离，向左滑动为负值
             const dist = startX - e.clientX;
@@ -1174,7 +1140,6 @@ const AIQA = () => {
 
         const handleDocumentMouseUp = (e: MouseEvent) => {
             e.preventDefault();
-            setIsMouseDown(false);
             setShowMask(false);
 
             // 移除 document 事件监听
@@ -1205,9 +1170,6 @@ const AIQA = () => {
             }
 
             setTouchStartX(0);
-            setTouchStartY(0);
-            setCurrentTouchX(0);
-            setCurrentTouchY(0);
         };
 
         // 添加 document 事件监听
@@ -1395,8 +1357,6 @@ const AIQA = () => {
         setTextInput('');
         // 清空识别结果
         recognizeResult.current = {} as Message;
-        // 重置已播报消息ID
-        setSpokenMessageId(null);
         // 清空对话历史
         reset();
         // 自动发送"你好"
@@ -1520,20 +1480,6 @@ const AIQA = () => {
                             <span className={styles.voiceText}>
                                 {loading ? 'AI正在回答...' : '语音通话中...'}
                             </span>
-                        </div>
-                    </div>
-                </div>
-            );
-        }
-
-        // 录音中：显示语音模式提示
-        if (voiceStatus === 'recording'&&false) {
-            return (
-                <div className={styles.textInputWrapper}>
-                    <div className={styles.textInputContainer}>
-                        <div className={`${styles.voicePrompt} ${styles.recording}`}>
-                            <Mic className={styles.voiceIcon} size={20} />
-                            <span className={styles.voiceText}>当前处于语音模式</span>
                         </div>
                     </div>
                 </div>
