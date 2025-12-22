@@ -110,7 +110,7 @@ const AIQA = () => {
     const initialQuestionRef = useRef<string | null>(null);
     const [spokenMessageId, setSpokenMessageId] = useState<string | number | null>(null);
     const [voiceId, setVoiceId] = useState<string>('');
-    const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+    // 注意：isAudioPlaying 现在从 useChatSSE 获取，用于服务器音频流
     const [audioVolume, setAudioVolume] = useState<number>(80);
     const [isUploading, setIsUploading] = useState(false); // 是否有文件正在上传
     const isUploadingRef = useRef(false); // 使用 ref 解决闭包问题
@@ -131,9 +131,11 @@ const AIQA = () => {
         messages,
         loading,
         error,
+        isAudioPlaying, // 从 useChatSSE 获取音频播放状态
         start,
         stop,
-        reset
+        reset,
+        stopAudio: stopStreamAudio // 停止服务器音频流的函数
     } = useChatSSE({
         url: `${import.meta.env.VITE_API_BASE_URL}/v3/chat`,
         botId: botIdFromRoute,
@@ -206,7 +208,7 @@ const AIQA = () => {
         setVoiceStatus('idle');
         recognizeResult.current = {}
         stop?.();
-        setIsAudioPlaying(false);
+        // isAudioPlaying 现在由 useChatSSE 管理，不需要手动设置
         stopVoiceActivityDetection();
         setIsVoiceCallActive(false);
         isVoiceCallActiveRef.current = false; // 同步更新 ref
@@ -248,7 +250,7 @@ const AIQA = () => {
                 audioRef.current.pause();
                 audioRef.current = null;
             }
-            setIsAudioPlaying(false)
+            // 注意：这是 TTS 备用播放，不影响服务器音频流的 isAudioPlaying 状态
             const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/v1/audio/speech`, {
                 method: 'POST',
                 headers: {
@@ -272,23 +274,19 @@ const AIQA = () => {
             audio.volume = audioVolume / 100
             audioRef.current = audio
             audio.onended = () => {
-                console.log('语音播报完成');
-                setIsAudioPlaying(false)
+                console.log('TTS 语音播报完成');
                 URL.revokeObjectURL(url)
             }
             audio.onerror = () => {
-                console.log('语音播报出错');
-                setIsAudioPlaying(false)
+                console.log('TTS 语音播报出错');
                 URL.revokeObjectURL(url)
             }
             await audio.play()
-            setIsAudioPlaying(true)
-            console.log('开始语音播报')
+            console.log('开始 TTS 语音播报')
         } catch (err) {
             if ((err as any)?.name === 'AbortError') return;
-            console.error('语音播放失败', err)
-            message.error('语音播放失败')
-            setIsAudioPlaying(false)
+            console.error('TTS 语音播放失败', err)
+            message.error('TTS 语音播放失败')
         } finally {
             speechAbortRef.current = null;
         }
@@ -300,18 +298,88 @@ const AIQA = () => {
             audioRef.current.currentTime = 0
             audioRef.current = null
         }
-        setIsAudioPlaying(false)
+        // TTS 播放停止，不影响服务器音频流的 isAudioPlaying 状态
+    }
+
+    // 将文字转换为音频并上传到服务器，返回包含 file_id 的对象
+    const convertTextToAudioAndUpload = async (text: string) => {
+        if (!voiceId) {
+            throw new Error('语音音色未设置');
+        }
+        if (!text?.trim()) {
+            throw new Error('文本内容为空');
+        }
+
+        try {
+            // 1. 调用 TTS API 将文字转换为音频
+            const ttsRes = await fetch(`${import.meta.env.VITE_API_BASE_URL}/v1/audio/speech`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: 'Bearer pat_zkUh7PgT34IDtE2y4VBBgnTZjBc3nZ2yZ9gXIwia6cYxpzfMMiwELEf3sZyjceYE'
+                },
+                body: JSON.stringify({
+                    voice_id: voiceId,
+                    response_format: 'wav',
+                    input: text,
+                }),
+            });
+
+            if (!ttsRes.ok) {
+                throw new Error(`TTS 转换失败: ${ttsRes.status}`);
+            }
+
+            // 2. 将音频数据转换为 Blob
+            const buffer = await ttsRes.arrayBuffer();
+            const audioBlob = new Blob([buffer], { type: 'audio/wav' });
+
+            // 3. 创建 File 对象（模拟用户上传的文件）
+            const timestamp = Date.now();
+            const audioFile = new File([audioBlob], `voice_${timestamp}.wav`, {
+                type: 'audio/wav',
+                lastModified: timestamp
+            });
+
+            // 4. 使用 Coze SDK 上传音频文件
+            const uploadResult = await cozeClient.files.upload({
+                file: audioFile,
+            });
+
+            console.log('🎵 音频文件上传成功:', {
+                file_id: uploadResult.id,
+                file_name: audioFile.name,
+                file_type: audioFile.type,
+                file_size: audioFile.size,
+                upload_result: uploadResult
+            });
+
+            // 5. 返回上传结果，格式与图片上传保持一致，但标记为音频文件
+            return {
+                uid: `audio_${timestamp}`,
+                name: audioFile.name,
+                status: 'done',
+                type: 'audio/wav',
+                originFileObj: audioFile,
+                response: uploadResult,
+                isAudio: true // 标记为音频文件，用于区分图片文件
+            };
+
+        } catch (error) {
+            console.error('文字转音频上传失败:', error);
+            throw error;
+        }
     }
 
     // 对话结束后自动播报最后一条 AI 回复
-    useEffect(() => {
-        if (loading) return
-        const lastAi = [...messages].reverse().find(m => m.role === 'ai' && m.content?.trim())
-        if (!lastAi) return
-        if (spokenMessageId === lastAi.id) return
-        playSpeech(lastAi.content)
-        setSpokenMessageId(lastAi.id)
-    }, [messages, loading, voiceId])
+    // 注意：现在使用服务器返回的音频流（conversation.audio.delta），不再需要 TTS 接口
+    // useEffect(() => {
+    //     if (loading) return
+    //     const lastAi = [...messages].reverse().find(m => m.role === 'ai' && m.content?.trim())
+    //     if (!lastAi) return
+    //     if (spokenMessageId === lastAi.id) return
+    //     playSpeech(lastAi.content)
+    //     setSpokenMessageId(lastAi.id)
+    // }, [messages, loading, voiceId])
 
     // 监听 loading 状态变化，在语音通话模式下 AI 回答完成后自动重新开始录音
     useEffect(() => {
@@ -1065,13 +1133,14 @@ const AIQA = () => {
     };
 
     const stopAudio =()=>{
-        console.log("播报停止")
+        console.log("停止 TTS 播报")
         if (audioRef.current) {
             audioRef.current.pause();
             audioRef.current.currentTime = 0;
             audioRef.current = null;
         }
-        setIsAudioPlaying(false);
+        // 注意：TTS 播放停止，不影响服务器音频流的 isAudioPlaying 状态
+        // 如果需要停止服务器音频流，请调用 stopStreamAudio()
         // 终止正在进行的 TTS 请求
         if (speechAbortRef.current) {
             speechAbortRef.current.abort();
@@ -1081,8 +1150,10 @@ const AIQA = () => {
 
     // 新建对话
     const handleNewConversation = () => {
-        // 停止音频播放
+        // 停止 TTS 音频播放
         stopAudio();
+        // 停止服务器音频流播放
+        stopStreamAudio();
         // 停止语音通话
         if (isVoiceCallActive) {
             stopVoiceCall();
@@ -1121,20 +1192,42 @@ const AIQA = () => {
         }
         stopAudio()
 
-
-        const userMsg = {
-            id: Date.now(),
-            role: 'user',
-            content,
-            content_type: 'text',
-            imageUrls: fileList.length > 0 ? fileList : undefined
-        };
-
-        setTextInput('');
-        // 清空文件列表
-        setFileList([]);
-
         try {
+            // 1. 将文字转换为音频并上传
+            let audioFileObj = null;
+            if (content && voiceId) {
+                try {
+                    message.loading('正在生成语音...', 0);
+                    audioFileObj = await convertTextToAudioAndUpload(content);
+                    message.destroy(); // 关闭 loading 提示
+                    message.success('语音生成成功');
+                } catch (error) {
+                    message.destroy();
+                    console.error('语音生成失败，将仅发送文字:', error);
+                    message.warning('语音生成失败，仅发送文字');
+                }
+            }
+
+            // 2. 构建完整的文件列表（图片 + 音频）
+            const allFiles = [...fileList];
+            if (audioFileObj) {
+                allFiles.push(audioFileObj);
+            }
+
+            // 3. 构建用户消息对象
+            const userMsg = {
+                id: Date.now(),
+                role: 'user',
+                content,
+                content_type: 'text',
+                imageUrls: allFiles.length > 0 ? allFiles : undefined
+            };
+
+            setTextInput('');
+            // 清空文件列表
+            setFileList([]);
+
+            // 4. 发送消息到 /v3/chat
             await start(userMsg);
         } catch (error) {
             console.error('调用chat接口失败:', error);
