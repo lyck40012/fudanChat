@@ -717,39 +717,35 @@ const AIQA = () => {
             console.log('voiceId:', voiceId);
             console.log('图片列表:', fileListRef.current);
 
-            // 1. 将语音识别的文字转换为音频并上传
-            let audioFileObj = null;
-            if (content && voiceId) {
-                try {
-                    console.log('开始生成音频文件...');
-
-                    audioFileObj = await convertTextToAudioAndUpload(content);
-                    message.destroy();
-                    console.log('实时通话：语音生成成功', audioFileObj);
-                } catch (error) {
-                    message.destroy();
-                    console.error('语音生成失败，将仅发送文字:', error);
-                    message.warning('语音生成失败，仅发送文字');
-                }
-            } else {
-                console.log('跳过音频生成 - content:', content, 'voiceId:', voiceId);
-            }
-
-            // 2. 构建完整的文件列表（图片 + 音频）
-            const allFiles = [...fileListRef.current];
-            if (audioFileObj) {
-                allFiles.push(audioFileObj);
-                console.log('添加音频文件到列表，总文件数:', allFiles.length);
-            }
-
-            // 3. 构建消息并发送
+            // 1. 构建基础消息，先更新消息列表
+            const filesSnapshot = [...fileListRef.current];
             const messageToSend = {
                 ...recognizeResult.current,
-                imageUrls: allFiles.length > 0 ? allFiles : undefined
+                imageUrls: filesSnapshot.length > 0 ? filesSnapshot : undefined
             };
-            console.log('实时通话发送消息:', messageToSend, allFiles);
+            console.log('实时通话发送消息:', messageToSend, filesSnapshot);
 
-            await start(messageToSend);
+            await start(messageToSend, {
+                prepareFiles: async () => {
+                    const attachments = [...filesSnapshot];
+                    if (content && voiceId) {
+                        try {
+                            console.log('开始生成音频文件...');
+                            const audioFileObj = await convertTextToAudioAndUpload(content);
+                            message.destroy();
+                            console.log('实时通话：语音生成成功', audioFileObj);
+                            attachments.push(audioFileObj);
+                        } catch (error) {
+                            message.destroy();
+                            console.error('语音生成失败，将仅发送文字:', error);
+                            message.warning('语音生成失败，仅发送文字');
+                        }
+                    } else {
+                        console.log('跳过音频生成 - content:', content, 'voiceId:', voiceId);
+                    }
+                    return attachments;
+                }
+            });
             console.log('消息发送完成');
 
             setFileList([]);
@@ -858,40 +854,37 @@ const AIQA = () => {
                     console.log('voiceId:', voiceId);
                     console.log('图片列表:', fileList);
 
-                    // 1. 将语音识别的文字转换为音频并上传
-                    let audioFileObj = null;
+                    // 1. 构建基础消息，先更新消息列表
                     const voiceContent = recognizeResult?.current?.content?.trim();
-                    if (voiceContent && voiceId) {
-                        try {
-                            console.log('开始生成音频文件...');
-
-                            audioFileObj = await convertTextToAudioAndUpload(voiceContent);
-                            message.destroy();
-                            console.log('按住说话：语音生成成功', audioFileObj);
-                        } catch (error) {
-                            message.destroy();
-                            console.error('语音生成失败，将仅发送文字:', error);
-                            message.warning('语音生成失败，仅发送文字');
-                        }
-                    } else {
-                        console.log('跳过音频生成 - voiceContent:', voiceContent, 'voiceId:', voiceId);
-                    }
-
-                    // 2. 构建完整的文件列表（图片 + 音频）
-                    const allFiles = [...fileList];
-                    if (audioFileObj) {
-                        allFiles.push(audioFileObj);
-                        console.log('添加音频文件到列表，总文件数:', allFiles.length);
-                    }
-
-                    // 3. 构建消息并发送
+                    const filesSnapshot = [...fileList];
                     const messageWithImages = {
                         ...(recognizeResult?.current ||{}),
-                        imageUrls: allFiles.length > 0 ? allFiles : undefined
+                        imageUrls: filesSnapshot.length > 0 ? filesSnapshot : undefined
                     };
 
                     console.log('准备发送的消息:', messageWithImages);
-                    await start(messageWithImages);
+                    await start(messageWithImages, {
+                        prepareFiles: async () => {
+                            const attachments = [...filesSnapshot];
+                            if (voiceContent && voiceId) {
+                                try {
+                                    console.log('开始生成音频文件...');
+
+                                    const audioFileObj = await convertTextToAudioAndUpload(voiceContent);
+                                    message.destroy();
+                                    console.log('按住说话：语音生成成功', audioFileObj);
+                                    attachments.push(audioFileObj);
+                                } catch (error) {
+                                    message.destroy();
+                                    console.error('语音生成失败，将仅发送文字:', error);
+                                    message.warning('语音生成失败，仅发送文字');
+                                }
+                            } else {
+                                console.log('跳过音频生成 - voiceContent:', voiceContent, 'voiceId:', voiceId);
+                            }
+                            return attachments;
+                        }
+                    });
                     console.log('消息发送完成');
 
                     // 发送后清空文件列表和识别结果
@@ -1048,38 +1041,35 @@ const AIQA = () => {
                 console.log('voiceId:', voiceId);
                 console.log('图片列表:', fileListSnapshot);
 
-                // 1. 将语音识别的文字转换为音频并上传
-                let audioFileObj = null;
+                // 1. 构建基础消息，先更新消息列表
                 const voiceContent = recognizeResult?.current?.content?.trim();
-                if (voiceContent && voiceId) {
-                    try {
-                        console.log('开始生成音频文件...');
-                        audioFileObj = await convertTextToAudioAndUpload(voiceContent);
-                        message.destroy();
-                        console.log('音频文件生成成功:', audioFileObj);
-                    } catch (error) {
-                        message.destroy();
-                        console.error('语音生成失败，将仅发送文字:', error);
-                        message.warning('语音生成失败，仅发送文字');
-                    }
-                } else {
-                    console.log('跳过音频生成 - voiceContent:', voiceContent, 'voiceId:', voiceId);
-                }
-
-                // 2. 构建完整的文件列表（图片 + 音频）
-                const allFiles = [...fileListSnapshot];
-                if (audioFileObj) {
-                    allFiles.push(audioFileObj);
-                    console.log('添加音频文件到列表，总文件数:', allFiles.length);
-                }
-
-                // 3. 构建消息并发送
+                const filesSnapshot = [...fileListSnapshot];
                 const messageWithImages = buildMessageWithImages(
                     recognizeResult?.current || {},
-                    allFiles
+                    filesSnapshot
                 );
                 console.log('准备发送的消息:', messageWithImages);
-                await start(messageWithImages);
+                await start(messageWithImages, {
+                    prepareFiles: async () => {
+                        const attachments = [...filesSnapshot];
+                        if (voiceContent && voiceId) {
+                            try {
+                                console.log('开始生成音频文件...');
+                                const audioFileObj = await convertTextToAudioAndUpload(voiceContent);
+                                message.destroy();
+                                console.log('音频文件生成成功:', audioFileObj);
+                                attachments.push(audioFileObj);
+                            } catch (error) {
+                                message.destroy();
+                                console.error('语音生成失败，将仅发送文字:', error);
+                                message.warning('语音生成失败，仅发送文字');
+                            }
+                        } else {
+                            console.log('跳过音频生成 - voiceContent:', voiceContent, 'voiceId:', voiceId);
+                        }
+                        return attachments;
+                    }
+                });
                 console.log('消息发送完成');
 
                 // 发送后清空文件列表和识别结果
@@ -1434,37 +1424,14 @@ const AIQA = () => {
             console.log('voiceId:', voiceId);
             console.log('图片列表:', fileList);
 
-            // 1. 将文字转换为音频并上传
-            let audioFileObj = null;
-            if (content && voiceId) {
-                try {
-                    console.log('开始生成音频文件...');
-                    audioFileObj = await convertTextToAudioAndUpload(content);
-                    message.destroy(); // 关闭 loading 提示
-                    console.log('文字输入：语音生成成功', audioFileObj);
-                } catch (error) {
-                    message.destroy();
-                    console.error('语音生成失败，将仅发送文字:', error);
-                    message.warning('语音生成失败，仅发送文字');
-                }
-            } else {
-                console.log('跳过音频生成 - content:', content, 'voiceId:', voiceId);
-            }
-
-            // 2. 构建完整的文件列表（图片 + 音频）
-            const allFiles = [...fileList];
-            if (audioFileObj) {
-                allFiles.push(audioFileObj);
-                console.log('添加音频文件到列表，总文件数:', allFiles.length);
-            }
-
-            // 3. 构建用户消息对象
+            // 1. 先构建基础消息并更新列表
+            const filesSnapshot = [...fileList];
             const userMsg = {
                 id: Date.now(),
                 role: 'user',
                 content,
                 content_type: 'text',
-                imageUrls: allFiles.length > 0 ? allFiles : undefined
+                imageUrls: filesSnapshot.length > 0 ? filesSnapshot : undefined
             };
 
             setTextInput('');
@@ -1472,8 +1439,28 @@ const AIQA = () => {
             setFileList([]);
 
             console.log('准备发送的消息:', userMsg);
-            // 4. 发送消息到 /v3/chat
-            await start(userMsg);
+            // 2. 发送消息到 /v3/chat，音频生成放在 prepareFiles
+            await start(userMsg, {
+                prepareFiles: async () => {
+                    const attachments = [...filesSnapshot];
+                    if (content && voiceId) {
+                        try {
+                            console.log('开始生成音频文件...');
+                            const audioFileObj = await convertTextToAudioAndUpload(content);
+                            message.destroy(); // 关闭 loading 提示
+                            console.log('文字输入：语音生成成功', audioFileObj);
+                            attachments.push(audioFileObj);
+                        } catch (error) {
+                            message.destroy();
+                            console.error('语音生成失败，将仅发送文字:', error);
+                            message.warning('语音生成失败，仅发送文字');
+                        }
+                    } else {
+                        console.log('跳过音频生成 - content:', content, 'voiceId:', voiceId);
+                    }
+                    return attachments;
+                }
+            });
             console.log('消息发送完成');
         } catch (error) {
             console.error('调用chat接口失败:', error);

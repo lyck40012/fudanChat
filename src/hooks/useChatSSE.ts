@@ -161,7 +161,7 @@ export function useChatSSE({url, headers = {}, botId = '7586122118481002502'}) {
         nextPlayTimeRef.current = 0
     }
 
-    const start = useCallback(async (userMessage) => {
+    const start = useCallback(async (userMessage, options?: { prepareFiles?: () => Promise<any[]> }) => {
         controllerRef.current?.abort()
 
         const controller = new AbortController()
@@ -195,6 +195,23 @@ export function useChatSSE({url, headers = {}, botId = '7586122118481002502'}) {
             }
         ])
 
+        // ✅ 3. 等待附件准备（上传音频/图片）
+        let resolvedFiles = userMessage?.imageUrls || []
+        if (options?.prepareFiles) {
+            try {
+                const extraFiles = await options.prepareFiles()
+                if (Array.isArray(extraFiles)) {
+                    resolvedFiles = [...resolvedFiles, ...extraFiles.filter(Boolean)]
+                }
+            } catch (err) {
+                console.error('附件准备失败', err)
+                setError('附件上传失败')
+                setLoading(false)
+                controller.abort()
+                return
+            }
+        }
+
         // 始终使用 object_string 格式
         let requestMessageArr = []
 
@@ -205,8 +222,8 @@ export function useChatSSE({url, headers = {}, botId = '7586122118481002502'}) {
         }]
 
         // 如果有附件（图片或音频），追加到数组中
-        if (userMessage?.imageUrls && userMessage?.imageUrls.length) {
-            userMessage.imageUrls.forEach(x => {
+        if (resolvedFiles && resolvedFiles.length) {
+            resolvedFiles.forEach(x => {
                 let obj = {
                     type: x.isAudio ? 'audio' : 'file', // 根据是否为音频文件使用不同的 type
                 }
