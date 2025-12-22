@@ -80,7 +80,7 @@ export function Home() {
                   navigate('/ai-qa', {
                     state: {
                       initialQuestion: '你好',
-                      botId: '7574343526331547690'
+                      botId: '7586122118481002502'
                     }
                   });
               }}
