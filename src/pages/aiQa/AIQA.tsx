@@ -127,6 +127,9 @@ const AIQA = () => {
     const isVoiceCallActiveRef = useRef(false); // 使用 ref 解决闭包问题
     const silenceTimerRef = useRef<NodeJS.Timeout | null>(null); // 静默检测定时器
     const lastContentRef = useRef<string>(''); // 上次识别的内容，用于检测变化
+    // 快捷键相关状态
+    const isShortcutRecordingRef = useRef(false); // 是否通过快捷键触发的录音
+    const shortcutPressStartTimeRef = useRef<number | null>(null); // 快捷键按下的时间
     const {
         messages,
         loading,
@@ -146,6 +149,25 @@ const AIQA = () => {
         //获取麦克风设备
         getDevices();
     }, []);
+
+    // 添加键盘快捷键监听
+    useEffect(() => {
+        // 添加键盘事件监听器
+        window.addEventListener('keydown', handleShortcutKeyDown);
+        window.addEventListener('keyup', handleShortcutKeyUp);
+
+        // 清理函数：组件卸载时移除监听器
+        return () => {
+            window.removeEventListener('keydown', handleShortcutKeyDown);
+            window.removeEventListener('keyup', handleShortcutKeyUp);
+            // 确保清理快捷键状态
+            if (isShortcutRecordingRef.current) {
+                isShortcutRecordingRef.current = false;
+                shortcutPressStartTimeRef.current = null;
+                safeStopTranscription();
+            }
+        };
+    }, []); // 空依赖数组，只在挂载和卸载时执行
 
     useEffect(() => {
         if (messageListRef.current) {
@@ -286,7 +308,7 @@ const AIQA = () => {
         } catch (err) {
             if ((err as any)?.name === 'AbortError') return;
             console.error('TTS 语音播放失败', err)
-            message.error('TTS 语音播放失败')
+
         } finally {
             speechAbortRef.current = null;
         }
@@ -506,9 +528,8 @@ const AIQA = () => {
     };
 
     const initClient = () => {
-        if (!hasPermission) {
-            throw new Error('麦克风权限未授予');
-        }
+        // 移除严格的权限预检查，让 WsTranscriptionClient 自动处理权限请求
+        // WsTranscriptionClient 会在初始化时自动请求麦克风权限
         const client = new WsTranscriptionClient({
             token: 'pat_zkUh7PgT34IDtE2y4VBBgnTZjBc3nZ2yZ9gXIwia6cYxpzfMMiwELEf3sZyjceYE',
             baseWsURL: 'wss://ws.coze.cn',
@@ -569,7 +590,7 @@ const AIQA = () => {
                 initClient();
             } catch (error) {
                 console.error(error);
-                message.error((error as Error).message || '语音初始化失败');
+
                 return;
             }
         }
@@ -701,18 +722,51 @@ const AIQA = () => {
             }
         }
 
-        // 发送消息（使用 ref 获取最新的文件列表）
-        const messageToSend = {
-            ...recognizeResult.current,
-            imageUrls: fileListRef.current.length > 0 ? fileListRef.current : undefined
-        };
-        console.log(messageToSend, fileListRef.current)
         try {
+            console.log('=== handleAutoSendInVoiceCall 开始发送 ===');
+            console.log('语音内容:', content);
+            console.log('voiceId:', voiceId);
+            console.log('图片列表:', fileListRef.current);
+
+            // 1. 将语音识别的文字转换为音频并上传
+            let audioFileObj = null;
+            if (content && voiceId) {
+                try {
+                    console.log('开始生成音频文件...');
+
+                    audioFileObj = await convertTextToAudioAndUpload(content);
+                    message.destroy();
+                    console.log('实时通话：语音生成成功', audioFileObj);
+                } catch (error) {
+                    message.destroy();
+                    console.error('语音生成失败，将仅发送文字:', error);
+                    message.warning('语音生成失败，仅发送文字');
+                }
+            } else {
+                console.log('跳过音频生成 - content:', content, 'voiceId:', voiceId);
+            }
+
+            // 2. 构建完整的文件列表（图片 + 音频）
+            const allFiles = [...fileListRef.current];
+            if (audioFileObj) {
+                allFiles.push(audioFileObj);
+                console.log('添加音频文件到列表，总文件数:', allFiles.length);
+            }
+
+            // 3. 构建消息并发送
+            const messageToSend = {
+                ...recognizeResult.current,
+                imageUrls: allFiles.length > 0 ? allFiles : undefined
+            };
+            console.log('实时通话发送消息:', messageToSend, allFiles);
+
             await start(messageToSend);
+            console.log('消息发送完成');
+
             setFileList([]);
             recognizeResult.current = {} as Message;
             lastContentRef.current = '';
-            console.log(" lastContentRef.current", lastContentRef.current)
+            console.log("lastContentRef.current", lastContentRef.current);
 
             // 等待 AI 回答完成后，自动重新开始录音
             // 这个逻辑会在 loading 状态变化时处理
@@ -727,18 +781,36 @@ const AIQA = () => {
         // 如果处于语音通话模式，不允许按住说话
         if (isVoiceCallActive) {
             message.warning('语音通话进行中，请先结束通话');
+            // 重置快捷键状态
+            if (isShortcutRecordingRef.current) {
+                isShortcutRecordingRef.current = false;
+                shortcutPressStartTimeRef.current = null;
+            }
             return;
         }
 
         // 如果有文件正在上传，不允许录音
         if (isUploading) {
             message.warning('文件正在上传中，请稍候...');
+            // 重置快捷键状态
+            if (isShortcutRecordingRef.current) {
+                isShortcutRecordingRef.current = false;
+                shortcutPressStartTimeRef.current = null;
+            }
             return;
         }
         // 正在生成回答时不允许再次录音
-        if (loading) return;
+        if (loading) {
+            // 重置快捷键状态
+            if (isShortcutRecordingRef.current) {
+                isShortcutRecordingRef.current = false;
+                shortcutPressStartTimeRef.current = null;
+            }
+            return;
+        }
 
         // 自动切换到语音模式并初始化客户端
+        // WsTranscriptionClient 会自动请求麦克风权限
         if (currentMode !== 'voice') {
             try {
                 if (!clientRef.current) {
@@ -748,6 +820,11 @@ const AIQA = () => {
             } catch (error) {
                 console.error(error);
                 message.error((error as Error).message || '语音初始化失败');
+                // 重置快捷键状态
+                if (isShortcutRecordingRef.current) {
+                    isShortcutRecordingRef.current = false;
+                    shortcutPressStartTimeRef.current = null;
+                }
                 return;
             }
         }
@@ -759,7 +836,6 @@ const AIQA = () => {
 
     const stopRecording = async () => {
         if (currentMode !== 'voice' || voiceStatus !== 'recording'){
-
             return
         };
 
@@ -784,24 +860,138 @@ const AIQA = () => {
             return;
         }
         try {
-            setTimeout(()=>{
-                clientRef?.current?.stop()
-                const messageWithImages = {
-                    ...(recognizeResult?.current ||{}),
-                    imageUrls: fileList.length > 0 ? fileList : undefined
-                };
-                start(messageWithImages)
-                // 发送后清空文件列表和识别结果
-                setFileList([]);
-                recognizeResult.current = {}
-            },1000)
-            // 将上传的图片附加到语音识别结果中
+            setTimeout(async ()=>{
+                try {
+                    clientRef?.current?.stop()
 
-    } catch (error) {
+                    console.log('=== stopRecording 开始发送 ===');
+                    console.log('语音内容:', recognizeResult?.current?.content);
+                    console.log('voiceId:', voiceId);
+                    console.log('图片列表:', fileList);
+
+                    // 1. 将语音识别的文字转换为音频并上传
+                    let audioFileObj = null;
+                    const voiceContent = recognizeResult?.current?.content?.trim();
+                    if (voiceContent && voiceId) {
+                        try {
+                            console.log('开始生成音频文件...');
+
+                            audioFileObj = await convertTextToAudioAndUpload(voiceContent);
+                            message.destroy();
+                            console.log('按住说话：语音生成成功', audioFileObj);
+                        } catch (error) {
+                            message.destroy();
+                            console.error('语音生成失败，将仅发送文字:', error);
+                            message.warning('语音生成失败，仅发送文字');
+                        }
+                    } else {
+                        console.log('跳过音频生成 - voiceContent:', voiceContent, 'voiceId:', voiceId);
+                    }
+
+                    // 2. 构建完整的文件列表（图片 + 音频）
+                    const allFiles = [...fileList];
+                    if (audioFileObj) {
+                        allFiles.push(audioFileObj);
+                        console.log('添加音频文件到列表，总文件数:', allFiles.length);
+                    }
+
+                    // 3. 构建消息并发送
+                    const messageWithImages = {
+                        ...(recognizeResult?.current ||{}),
+                        imageUrls: allFiles.length > 0 ? allFiles : undefined
+                    };
+
+                    console.log('准备发送的消息:', messageWithImages);
+                    await start(messageWithImages);
+                    console.log('消息发送完成');
+
+                    // 发送后清空文件列表和识别结果
+                    setFileList([]);
+                    recognizeResult.current = {}
+                } catch (error) {
+                    console.error('按住说话发送失败:', error);
+                    message.error('发送失败');
+                    recognizeResult.current = {}
+                }
+            },1000)
+
+        } catch (error) {
             console.error('调用chat接口失败:', error);
             message.error('请求失败');
             // 发生错误时也要清空
             recognizeResult.current = {}
+        }
+    };
+
+    // 处理快捷键按下（Shift + R）
+    const handleShortcutKeyDown = (e: KeyboardEvent) => {
+        // 检测 Shift + R 组合键（不区分大小写）
+        if (e.shiftKey && (e.key === 'r' || e.key === 'R')) {
+            // 防止重复触发
+            if (isShortcutRecordingRef.current) return;
+
+            // 防止默认行为
+            e.preventDefault();
+
+            console.log('快捷键 Shift+R 触发录音');
+
+            // 标记为快捷键触发的录音
+            isShortcutRecordingRef.current = true;
+            shortcutPressStartTimeRef.current = Date.now();
+
+            // 触发录音开始（复用现有逻辑，WsTranscriptionClient 会自动处理权限）
+            startRecording();
+        }
+    };
+
+    // 处理快捷键松开
+    const handleShortcutKeyUp = (e: KeyboardEvent) => {
+        // 如果是通过快捷键触发的录音，松开任何键都停止录音
+        if (isShortcutRecordingRef.current) {
+            // 防止默认行为
+            e.preventDefault();
+
+            console.log('快捷键松开，停止录音');
+
+            // 获取按下时长
+            const pressDuration = shortcutPressStartTimeRef.current
+                ? Date.now() - shortcutPressStartTimeRef.current
+                : 0;
+
+            // 重置快捷键状态
+            isShortcutRecordingRef.current = false;
+            shortcutPressStartTimeRef.current = null;
+
+            // 立即重置UI状态
+            setVoiceStatus('idle');
+
+            // 如果有文件正在上传，不允许发送（使用 ref 获取最新状态）
+            if (isUploadingRef.current) {
+                message.warning('文件正在上传中，请稍候...');
+                safeStopTranscription();
+                return;
+            }
+
+            // 无内容且无图片：仅停止录音（使用 ref 获取最新的文件列表）
+            if (!recognizeResult?.current?.content && fileListRef.current.length === 0) {
+                safeStopTranscription();
+                return;
+            }
+
+            // 录音时间过短
+            if (pressDuration < 500) {
+                safeStopTranscription();
+                message.warning('时间过短');
+                return;
+            }
+
+            // 触发发送（使用 ref 获取最新的文件列表）
+            const fileListSnapshot = [...fileListRef.current];
+            finalizePressToTalk({
+                cancel: false,
+                pressDuration,
+                fileListSnapshot
+            });
         }
     };
 
@@ -824,7 +1014,7 @@ const AIQA = () => {
     };
 
     // 统一处理：按住说话松手后的发送/取消逻辑（触摸/鼠标共用）
-    const finalizePressToTalk = (options: {
+    const finalizePressToTalk = async (options: {
         cancel: boolean;
         pressDuration: number;
         fileListSnapshot: UploadFile[];
@@ -860,16 +1050,56 @@ const AIQA = () => {
         }
 
         // 延迟发送：保留原逻辑，给语音识别一个收尾时间
-        setTimeout(() => {
-            safeStopTranscription();
-            const messageWithImages = buildMessageWithImages(
-                recognizeResult?.current || {},
-                fileListSnapshot
-            );
-            start(messageWithImages);
-            // 发送后清空文件列表和识别结果
-            setFileList([]);
-            recognizeResult.current = {} as Message;
+        setTimeout(async () => {
+            try {
+                safeStopTranscription();
+
+                console.log('=== finalizePressToTalk 开始发送 ===');
+                console.log('语音内容:', recognizeResult?.current?.content);
+                console.log('voiceId:', voiceId);
+                console.log('图片列表:', fileListSnapshot);
+
+                // 1. 将语音识别的文字转换为音频并上传
+                let audioFileObj = null;
+                const voiceContent = recognizeResult?.current?.content?.trim();
+                if (voiceContent && voiceId) {
+                    try {
+                        console.log('开始生成音频文件...');
+                        audioFileObj = await convertTextToAudioAndUpload(voiceContent);
+                        message.destroy();
+                        console.log('音频文件生成成功:', audioFileObj);
+                    } catch (error) {
+                        message.destroy();
+                        console.error('语音生成失败，将仅发送文字:', error);
+                        message.warning('语音生成失败，仅发送文字');
+                    }
+                } else {
+                    console.log('跳过音频生成 - voiceContent:', voiceContent, 'voiceId:', voiceId);
+                }
+
+                // 2. 构建完整的文件列表（图片 + 音频）
+                const allFiles = [...fileListSnapshot];
+                if (audioFileObj) {
+                    allFiles.push(audioFileObj);
+                    console.log('添加音频文件到列表，总文件数:', allFiles.length);
+                }
+
+                // 3. 构建消息并发送
+                const messageWithImages = buildMessageWithImages(
+                    recognizeResult?.current || {},
+                    allFiles
+                );
+                console.log('准备发送的消息:', messageWithImages);
+                await start(messageWithImages);
+                console.log('消息发送完成');
+
+                // 发送后清空文件列表和识别结果
+                setFileList([]);
+                recognizeResult.current = {} as Message;
+            } catch (error) {
+                console.error('按住说话发送失败:', error);
+                message.error('发送失败');
+            }
         }, 1000);
     };
 
@@ -1213,25 +1443,33 @@ const AIQA = () => {
         stopAudio()
 
         try {
+            console.log('=== handleSendText 开始发送 ===');
+            console.log('文字内容:', content);
+            console.log('voiceId:', voiceId);
+            console.log('图片列表:', fileList);
+
             // 1. 将文字转换为音频并上传
             let audioFileObj = null;
             if (content && voiceId) {
                 try {
-                    message.loading('正在生成语音...', 0);
+                    console.log('开始生成音频文件...');
                     audioFileObj = await convertTextToAudioAndUpload(content);
                     message.destroy(); // 关闭 loading 提示
-                    message.success('语音生成成功');
+                    console.log('文字输入：语音生成成功', audioFileObj);
                 } catch (error) {
                     message.destroy();
                     console.error('语音生成失败，将仅发送文字:', error);
                     message.warning('语音生成失败，仅发送文字');
                 }
+            } else {
+                console.log('跳过音频生成 - content:', content, 'voiceId:', voiceId);
             }
 
             // 2. 构建完整的文件列表（图片 + 音频）
             const allFiles = [...fileList];
             if (audioFileObj) {
                 allFiles.push(audioFileObj);
+                console.log('添加音频文件到列表，总文件数:', allFiles.length);
             }
 
             // 3. 构建用户消息对象
@@ -1247,8 +1485,10 @@ const AIQA = () => {
             // 清空文件列表
             setFileList([]);
 
+            console.log('准备发送的消息:', userMsg);
             // 4. 发送消息到 /v3/chat
             await start(userMsg);
+            console.log('消息发送完成');
         } catch (error) {
             console.error('调用chat接口失败:', error);
             message.error('请求失败');
