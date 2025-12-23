@@ -1534,7 +1534,7 @@ const AIQA = () => {
             {showMask && (
                 <div className={styles.voiceMask}>
                     <div className={styles.maskContent}>
-                        <div className={styles.maskIcon}>
+                       {/* <div className={styles.maskIcon}>
                             <Mic size={60} />
                         </div>
                         <div className={styles.maskText}>
@@ -1542,7 +1542,7 @@ const AIQA = () => {
                         </div>
                         <div className={styles.maskHint}>
                             {isCanceling ? '' : '松开，发送消息'}
-                        </div>
+                        </div>*/}
                     </div>
                 </div>
             )}
