@@ -1501,7 +1501,9 @@ const AIQA = () => {
                                 handleSendText();
                             }
                         }}
-                        placeholder="请输入指令..."
+                        placeholder={fileList.some(isImageFile)
+                            ? '上传/拍好报告后，请说“这是我的报告。”'
+                            : '请输入指令...'}
                         className={styles.textInput}
                         disabled={loading || isUploading}
                         rows={1}
