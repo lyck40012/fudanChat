@@ -77,7 +77,7 @@ const AIQA = () => {
     const location = useLocation();
 
     // 从路由获取 botId，默认使用预问诊的 botId
-    const botIdFromRoute = (location.state as { botId?: string })?.botId || '7574375637029273609';
+    const botIdFromRoute = (location.state as { botId?: string })?.botId || '7586122118481002502';
     const pageTitle = botIdFromRoute === '7574375637029273609' ? '病史采集小助理' : '报告解读小助手';
 
     // 创建 Coze API 客户端实例
