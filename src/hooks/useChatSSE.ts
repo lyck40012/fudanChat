@@ -29,9 +29,15 @@ export function useChatSSE({url, headers = {}, botId = '7586122118481002502'}) {
     const isPlayingAudioRef = useRef(false)
     const nextPlayTimeRef = useRef(0)
     const isAudioStoppedByUserRef = useRef(false) // 标记用户是否手动停止了播放
+    const activeSourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set()) // 跟踪所有已调度的音频源
 
     // 初始化 AudioContext
     const initAudioContext = () => {
+        // 如果之前被 close，需要重新创建
+        if (audioContextRef.current && audioContextRef.current.state === 'closed') {
+            audioContextRef.current = null
+        }
+
         if (!audioContextRef.current) {
             const AudioCtx = window.AudioContext || (window as any).webkitAudioContext
             audioContextRef.current = new AudioCtx()
@@ -88,6 +94,7 @@ export function useChatSSE({url, headers = {}, botId = '7586122118481002502'}) {
             const source = audioContext.createBufferSource()
             source.buffer = audioBuffer
             source.connect(audioContext.destination)
+            activeSourcesRef.current.add(source)
 
             // 计算播放时间
             const currentTime = audioContext.currentTime
@@ -111,6 +118,13 @@ export function useChatSSE({url, headers = {}, botId = '7586122118481002502'}) {
             // 监听播放结束
             source.onended = () => {
                 console.log('🎵 音频块播放完成')
+                activeSourcesRef.current.delete(source)
+                // 所有片段结束后重置状态，避免 stop 后无法重新播放
+                if (activeSourcesRef.current.size === 0) {
+                    isPlayingAudioRef.current = false
+                    setIsAudioPlaying(false)
+                    nextPlayTimeRef.current = 0
+                }
             }
 
         } catch (error) {
@@ -143,15 +157,23 @@ export function useChatSSE({url, headers = {}, botId = '7586122118481002502'}) {
         isAudioStoppedByUserRef.current = true
         console.log('⏸️ 用户手动停止播放，已设置阻止标志')
 
-        if (audioSourceRef.current) {
+        // 停止所有已调度的音频源，避免未来时间线继续播放
+        activeSourcesRef.current.forEach(src => {
             try {
-                audioSourceRef.current.stop()
-                console.log('⚠️ 音频播放被手动停止')
-            } catch (e) {
-                // 忽略已经停止的错误
+                src.stop()
+            } catch (_) {
+                // 已停止的节点可能抛错，忽略
             }
-            audioSourceRef.current = null
+        })
+        activeSourcesRef.current.clear()
+        audioSourceRef.current = null
+
+        // 关闭 AudioContext 可立即取消剩余调度，下一次播放会重建
+        if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+            audioContextRef.current.close().catch(() => {})
         }
+        audioContextRef.current = null
+
         if (wasPlaying) {
             console.log('⚠️ 清空音频播放状态（播放未完成）')
         }
@@ -372,8 +394,7 @@ export function useChatSSE({url, headers = {}, botId = '7586122118481002502'}) {
                             break
 
                         case 'conversation.chat.completed':
-                            // 对话完成后，确保所有音频播放完成
-                            finishAudioPlayback()
+
                             setLoading(false)
                             controller.abort()
                             return
