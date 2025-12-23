@@ -638,15 +638,12 @@ const AIQA = () => {
 
     // 处理语音通话中的内容更新，触发静默检测
     const handleVoiceCallContentUpdate = (content: string) => {
+        // 每次内容更新先停止所有播报（TTS + 服务器流式音频），避免语音与新录音冲突
+        stopAudio()
+
         // 如果图片正在上传，不触发静默检测
         if (isUploadingRef.current) {
             console.log('图片正在上传中，暂不触发自动发送');
-            return;
-        }
-
-        // 如果音频正在播放，不触发静默检测，避免打断 AI 语音
-        if (isAudioPlaying) {
-            console.log('音频正在播放中，暂不触发自动发送');
             return;
         }
 
