@@ -1,4 +1,5 @@
 import {useCallback, useRef, useState} from 'react'
+
 const formatDateTime = () => {
     const now = new Date();
     const pad = (num) => String(num).padStart(2, '0');
@@ -16,8 +17,8 @@ export function useChatSSE({url, headers = {}, botId = '7586122118481002502'}) {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [isAudioPlaying, setIsAudioPlaying] = useState(false)
-   const isConversationRef = useRef<boolean>(false)
-    const  conversationIdRef = useRef<number>('')
+    const isConversationRef = useRef<boolean>(false)
+    const conversationIdRef = useRef<number>('')
     const controllerRef = useRef<AbortController | null>(null)
     const assistantIdRef = useRef<string | null>(null)
     const chatIdRef = useRef<string | null>(null)
@@ -83,6 +84,13 @@ export function useChatSSE({url, headers = {}, botId = '7586122118481002502'}) {
 
             // 初始化 AudioContext
             const audioContext = initAudioContext()
+            if (audioContext.state === 'suspended') {
+                try {
+                    await audioContext.resume()
+                } catch (_) {
+                    // resume 失败时先忽略，后续片段仍会尝试播放
+                }
+            }
 
             // 创建 AudioBuffer
             const sampleRate = 24000
@@ -132,22 +140,6 @@ export function useChatSSE({url, headers = {}, botId = '7586122118481002502'}) {
         }
     }
 
-    // 完成音频播放
-    const finishAudioPlayback = () => {
-        // 等待所有音频块播放完成
-        const audioContext = audioContextRef.current
-        if (audioContext && isPlayingAudioRef.current) {
-            const waitTime = Math.max(0, nextPlayTimeRef.current - audioContext.currentTime)
-            console.log(`🎵 等待最后的音频块播放完成，剩余时间: ${waitTime.toFixed(3)} 秒`)
-
-            setTimeout(() => {
-                console.log('🎵 所有音频播放完成')
-                isPlayingAudioRef.current = false
-                setIsAudioPlaying(false)
-                nextPlayTimeRef.current = 0
-            }, waitTime * 1000)
-        }
-    }
 
     // 停止音频播放
     const stopAudio = () => {
@@ -170,7 +162,8 @@ export function useChatSSE({url, headers = {}, botId = '7586122118481002502'}) {
 
         // 关闭 AudioContext 可立即取消剩余调度，下一次播放会重建
         if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-            audioContextRef.current.close().catch(() => {})
+            audioContextRef.current.close().catch(() => {
+            })
         }
         audioContextRef.current = null
 
@@ -253,7 +246,7 @@ export function useChatSSE({url, headers = {}, botId = '7586122118481002502'}) {
             type: 'text',
             text: userMessage?.content || '',
         }]
-        console.log("resolvedFiles============>",resolvedFiles)
+        console.log("resolvedFiles============>", resolvedFiles)
         // 如果有附件（图片或音频），追加到数组中
         if (resolvedFiles && resolvedFiles.length) {
             resolvedFiles.forEach(x => {
@@ -261,7 +254,7 @@ export function useChatSSE({url, headers = {}, botId = '7586122118481002502'}) {
                     type: x.isAudio ? 'audio' : 'file', // 根据是否为音频文件使用不同的 type
                 }
                 obj['file_id'] = x.response.id
-                console.log('📎 添加文件到消息:', { type: obj.type, file_id: obj['file_id'], isAudio: x.isAudio })
+                console.log('📎 添加文件到消息:', {type: obj.type, file_id: obj['file_id'], isAudio: x.isAudio})
                 arr.push(obj)
             })
         }
@@ -273,12 +266,12 @@ export function useChatSSE({url, headers = {}, botId = '7586122118481002502'}) {
             content: JSON.stringify(arr)
         })
 
-        const requestUrl =  `${url}?conversation_id=${conversationIdRef.current}`
+        const requestUrl = `${url}?conversation_id=${conversationIdRef.current}`
         userIdRef.current = userIdRef.current || formatDateTime()
 
         const requestBody = {
             bot_id: botId,
-            user_id:userIdRef.current,
+            user_id: userIdRef.current,
             stream: true,
             auto_save_history: true,
             parameters: {
@@ -347,18 +340,11 @@ export function useChatSSE({url, headers = {}, botId = '7586122118481002502'}) {
                     if (!dataLine) continue
                     const dataRaw = dataLine.slice(5).trim()
 
-                    // ✅ DONE
-                    if (dataRaw === '"[DONE]"') {
-                        setLoading(false)
-                        controller.abort()
-                        return
-                    }
-
                     const data = JSON.parse(dataRaw)
-        if(!isConversationRef.current){
-            conversationIdRef.current = data.conversation_id
-            isConversationRef.current = true
-        }
+                    if (!isConversationRef.current) {
+                        conversationIdRef.current = data.conversation_id
+                        isConversationRef.current = true
+                    }
 
                     switch (event) {
                         case 'conversation.chat.created':
@@ -392,12 +378,10 @@ export function useChatSSE({url, headers = {}, botId = '7586122118481002502'}) {
                         case 'conversation.message.completed':
                             // ✅ 单条消息完成（一般可忽略）
                             break
-
                         case 'conversation.chat.completed':
-
                             setLoading(false)
-                            controller.abort()
-                            return
+                            // 不主动中断连接，等待音频流自然结束，避免截断剩余片段
+                            break
 
                         case 'conversation.chat.failed':
                             setError(data?.last_error?.msg || '对话失败')
