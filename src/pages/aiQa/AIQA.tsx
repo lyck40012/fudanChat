@@ -177,9 +177,6 @@ const AIQA = () => {
     useEffect(() => () => {
         if (audioRef.current) {
             const src = audioRef.current.src;
-            audioRef.current.pause();
-            audioRef.current.currentTime = 0;
-            audioRef.current = null;
             if (src?.startsWith('blob:')) URL.revokeObjectURL(src);
         }
         if (clientRef.current) {
@@ -189,10 +186,6 @@ const AIQA = () => {
                 console.error('停止语音客户端失败', err);
             }
             clientRef.current = undefined;
-        }
-        if (speechAbortRef.current) {
-            speechAbortRef.current.abort();
-            speechAbortRef.current = null;
         }
         // 清理语音通话的定时器
         if (silenceTimerRef.current) {
@@ -207,6 +200,7 @@ const AIQA = () => {
         stopVoiceActivityDetection();
         setIsVoiceCallActive(false);
         isVoiceCallActiveRef.current = false; // 同步更新 ref
+        stopAudio()
     }, []);
 
     // 音量变化时同步到当前音频
@@ -1288,7 +1282,6 @@ const AIQA = () => {
     };
 
     const stopAudio =()=>{
-        console.log("停止 TTS 播报")
         if (audioRef.current) {
             audioRef.current.pause();
             audioRef.current.currentTime = 0;
