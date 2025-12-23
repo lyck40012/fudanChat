@@ -86,6 +86,7 @@ const AIQA = () => {
         allowPersonalAccessTokenInBrowser: true,
         baseURL: 'https://api.coze.cn',
     })).current;
+    const VOICE_ID = '7426725529589661723';
     const recognizeResult = useRef<Message>({} as Message);
     const [currentMode, setCurrentMode] = useState<InputMode>('text');
     const [textInput, setTextInput] = useState('');
@@ -108,7 +109,6 @@ const AIQA = () => {
     const rmsRafRef = useRef<number | null>(null);
     const initialQuestionRef = useRef<string | null>(null);
     const initialQuestionSentRef = useRef<boolean>(false);
-    const [voiceId, setVoiceId] = useState<string>('');
     // 注意：isAudioPlaying 现在从 useChatSSE 获取，用于服务器音频流
     const [audioVolume, setAudioVolume] = useState<number>(80);
     const [isUploading, setIsUploading] = useState(false); // 是否有文件正在上传
@@ -173,28 +173,6 @@ const AIQA = () => {
         }
     }, [messages]);
 
-    // 拉取可用音色列表
-    useEffect(() => {
-        const fetchVoices = async () => {
-            try {
-                const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/v1/audio/voices`, {
-                    method: 'GET',
-                    headers: {
-                        Authorization: 'Bearer pat_zkUh7PgT34IDtE2y4VBBgnTZjBc3nZ2yZ9gXIwia6cYxpzfMMiwELEf3sZyjceYE'
-                    },
-                })
-                if (!res.ok) throw new Error(`拉取音色失败: ${res.status}`)
-                const data = await res.json()
-              let findItem = data?.data?.voice_list?.find(x=>x.voice_id=='7426725529589661723')
-                const id = findItem?.voice_id
-                if (id) setVoiceId(id)
-            } catch (err) {
-                console.error('获取音色失败', err)
-            }
-        }
-        fetchVoices()
-    }, [])
-
     // 组件卸载时彻底清理语音链路，防止残留播放/录制/请求
     useEffect(() => () => {
         if (audioRef.current) {
@@ -252,7 +230,6 @@ const AIQA = () => {
         stopAudio()
     }, [currentMode]);
     const playSpeech = async (text: string) => {
-        if (!voiceId) return
         if (!text?.trim()) return;
         try {
             // 若已有语音请求在飞行，则先中止
@@ -276,7 +253,7 @@ const AIQA = () => {
                 },
                 signal: controller.signal,
                 body: JSON.stringify({
-                    voice_id: voiceId || '',
+                    voice_id: VOICE_ID,
                     response_format: 'wav',
                     input: text,
                 }),
@@ -313,9 +290,6 @@ const AIQA = () => {
 
     // 将文字转换为音频并上传到服务器，返回包含 file_id 的对象
     const convertTextToAudioAndUpload = async (text: string) => {
-        if (!voiceId) {
-            throw new Error('语音音色未设置');
-        }
         if (!text?.trim()) {
             throw new Error('文本内容为空');
         }
@@ -329,7 +303,7 @@ const AIQA = () => {
                     Authorization: 'Bearer pat_zkUh7PgT34IDtE2y4VBBgnTZjBc3nZ2yZ9gXIwia6cYxpzfMMiwELEf3sZyjceYE'
                 },
                 body: JSON.stringify({
-                    voice_id: voiceId,
+                    voice_id: VOICE_ID,
                     response_format: 'wav',
                     input: text,
                 }),
@@ -692,7 +666,6 @@ const AIQA = () => {
         try {
             console.log('=== handleAutoSendInVoiceCall 开始发送 ===');
             console.log('语音内容:', content);
-            console.log('voiceId:', voiceId);
             console.log('图片列表:', fileListRef.current);
 
             // 1. 构建基础消息，先更新消息列表
@@ -706,7 +679,7 @@ const AIQA = () => {
             await start(messageToSend, {
                 prepareFiles: async () => {
                     const attachments = [...filesSnapshot];
-                    if (content && voiceId) {
+                    if (content) {
                         try {
                             console.log('开始生成音频文件...');
                             const audioFileObj = await convertTextToAudioAndUpload(content);
@@ -718,8 +691,6 @@ const AIQA = () => {
                             console.error('语音生成失败，将仅发送文字:', error);
                             message.warning('语音生成失败，仅发送文字');
                         }
-                    } else {
-                        console.log('跳过音频生成 - content:', content, 'voiceId:', voiceId);
                     }
                     return attachments;
                 }
@@ -829,7 +800,6 @@ const AIQA = () => {
 
                     console.log('=== stopRecording 开始发送 ===');
                     console.log('语音内容:', recognizeResult?.current?.content);
-                    console.log('voiceId:', voiceId);
                     console.log('图片列表:', fileList);
 
                     // 1. 构建基础消息，先更新消息列表
@@ -846,7 +816,7 @@ const AIQA = () => {
                     await start(messageWithImages, {
                         prepareFiles: async () => {
                             const attachments = [...filesSnapshot];
-                            if (voiceContent && voiceId) {
+                            if (voiceContent) {
                                 try {
                                     console.log('开始生成音频文件...');
 
@@ -859,8 +829,6 @@ const AIQA = () => {
                                     console.error('语音生成失败，将仅发送文字:', error);
                                     message.warning('语音生成失败，仅发送文字');
                                 }
-                            } else {
-                                console.log('跳过音频生成 - voiceContent:', voiceContent, 'voiceId:', voiceId);
                             }
                             return attachments;
                         }
@@ -1017,7 +985,6 @@ const AIQA = () => {
 
                 console.log('=== finalizePressToTalk 开始发送 ===');
                 console.log('语音内容:', recognizeResult?.current?.content);
-                console.log('voiceId:', voiceId);
                 console.log('图片列表:', fileListSnapshot);
 
                 // 1. 构建基础消息，先更新消息列表
@@ -1033,7 +1000,7 @@ const AIQA = () => {
                 await start(messageWithImages, {
                     prepareFiles: async () => {
                         const attachments = [...filesSnapshot];
-                        if (voiceContent && voiceId) {
+                        if (voiceContent) {
                             try {
                                 console.log('开始生成音频文件...');
                                 const audioFileObj = await convertTextToAudioAndUpload(voiceContent);
@@ -1045,8 +1012,6 @@ const AIQA = () => {
                                 console.error('语音生成失败，将仅发送文字:', error);
                                 message.warning('语音生成失败，仅发送文字');
                             }
-                        } else {
-                            console.log('跳过音频生成 - voiceContent:', voiceContent, 'voiceId:', voiceId);
                         }
                         return attachments;
                     }
@@ -1380,7 +1345,6 @@ const AIQA = () => {
         try {
             console.log('=== handleSendText 开始发送 ===');
             console.log('文字内容:', content);
-            console.log('voiceId:', voiceId);
             console.log('图片列表:', fileList);
 
             // 1. 先构建基础消息并更新列表
@@ -1402,7 +1366,7 @@ const AIQA = () => {
             await start(userMsg, {
                 prepareFiles: async () => {
                     const attachments = [...filesSnapshot];
-                    if (voiceId) {
+                    if (content) {
                         try {
                             console.log('开始生成音频文件...');
                             const audioFileObj = await convertTextToAudioAndUpload(content || '请分析图片');
@@ -1414,8 +1378,6 @@ const AIQA = () => {
                             console.error('语音生成失败，将仅发送文字:', error);
                             message.warning('语音生成失败，仅发送文字');
                         }
-                    } else {
-                        console.log('跳过音频生成 - content:', content, 'voiceId:', voiceId);
                     }
                     return attachments;
                 }
@@ -1453,17 +1415,11 @@ const AIQA = () => {
         // 已发送则不重复
         if (initialQuestionSentRef.current) return;
 
-        // 无音色时先等待，确保首条消息也能先生成并上传音频
-        if (!voiceId) {
-            console.log('等待音色加载后再发送首条自动消息');
-            return;
-        }
-
         initialQuestionSentRef.current = true;
         setCurrentMode('text');
         setTextInput(question);
         handleSendText(question);
-    }, [location.state, voiceId]);
+    }, [location.state]);
 
     // 统一渲染输入区域：仅保留文本输入模式
     const renderInputArea = () => {
