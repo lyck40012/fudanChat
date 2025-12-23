@@ -1405,10 +1405,10 @@ const AIQA = () => {
             await start(userMsg, {
                 prepareFiles: async () => {
                     const attachments = [...filesSnapshot];
-                    if (content && voiceId) {
+                    if (voiceId) {
                         try {
                             console.log('开始生成音频文件...');
-                            const audioFileObj = await convertTextToAudioAndUpload(content);
+                            const audioFileObj = await convertTextToAudioAndUpload(content || '请分析图片');
                             message.destroy(); // 关闭 loading 提示
                             console.log('文字输入：语音生成成功', audioFileObj);
                             attachments.push(audioFileObj);
@@ -1566,7 +1566,7 @@ const AIQA = () => {
 
                         <div className={styles.mainContent}>
                             <div className={styles.chatArea}>
-                                <div className={styles.modeInfo}>
+                        {/*        <div className={styles.modeInfo}>
                                     <p>
                                         {isVoiceCallActive && '>>> 语音通话进行中...'}
                                         {!isVoiceCallActive && currentMode === 'voice' && '>>> 语音输入模式已激活'}
@@ -1574,7 +1574,7 @@ const AIQA = () => {
                                         {!isVoiceCallActive && currentMode === 'file' && '>>> 文件解析模块加载完毕'}
                                         {!isVoiceCallActive && currentMode === 'camera' && '>>> 视觉传感器已连接'}
                                     </p>
-                                </div>
+                                </div>*/}
 
                                 <div className={styles.messageList} ref={messageListRef}>
                                     <div className={styles.messageListInner}>
